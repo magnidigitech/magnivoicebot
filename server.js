@@ -184,7 +184,7 @@ wss.on('connection', (ws) => {
 
     if (sarvamTtsWs && sarvamTtsWs.readyState === WebSocket.OPEN) {
       const ttsMessage = {
-        type: 'audio',
+        type: 'text',
         data: {
           text: greetingText
         }
@@ -243,7 +243,7 @@ wss.on('connection', (ws) => {
           // Stream LLM response text to Sarvam TTS WebSocket
           if (sarvamTtsWs && sarvamTtsWs.readyState === WebSocket.OPEN) {
             const ttsMessage = {
-              type: 'audio',
+              type: 'text',
               data: {
                 text: aiResponse
               }
@@ -286,10 +286,9 @@ wss.on('connection', (ws) => {
       const config = {
         type: 'config',
         data: {
-          target_language_code: 'en-IN',
+          target_language_code: 'te-IN',
           speaker: 'shubh',
-          output_audio_codec: 'linear16',
-          output_audio_bitrate: 8000
+          output_audio_codec: 'linear16'
         }
       };
       sarvamTtsWs.send(JSON.stringify(config));
