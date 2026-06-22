@@ -235,9 +235,7 @@ wss.on('connection', (ws) => {
   function attemptGreeting() {
     if (streamSid && ttsConfigured && !greetingSent) {
       greetingSent = true;
-      setTimeout(() => {
-        sendInitialGreeting();
-      }, 500);
+      sendInitialGreeting();
     }
   }
 
@@ -261,6 +259,7 @@ wss.on('connection', (ws) => {
         }
       };
       sarvamTtsWs.send(JSON.stringify(ttsMessage));
+      sarvamTtsWs.send(JSON.stringify({ type: 'flush' }));
     } else {
       console.warn('Cannot send initial greeting: Sarvam TTS WebSocket is not open.');
     }
@@ -325,6 +324,7 @@ wss.on('connection', (ws) => {
               }
             };
             sarvamTtsWs.send(JSON.stringify(ttsMessage));
+            sarvamTtsWs.send(JSON.stringify({ type: 'flush' }));
           } else {
             console.warn('Cannot synthesize TTS: Sarvam TTS WebSocket is not open.');
           }
@@ -360,7 +360,7 @@ wss.on('connection', (ws) => {
       console.log('Sarvam TTS connection opened successfully.');
       
       const speaker = process.env.SARVAM_SPEAKER || 'neha';
-      const pace = parseFloat(process.env.SARVAM_PACE || '1.0');
+      const pace = parseFloat(process.env.SARVAM_PACE || '1.2');
       const temperature = parseFloat(process.env.SARVAM_TEMPERATURE || '0.2');
 
       // Send configuration message
