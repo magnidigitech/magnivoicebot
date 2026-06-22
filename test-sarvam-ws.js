@@ -30,9 +30,11 @@ ws.on('open', () => {
     type: 'config',
     data: {
       target_language_code: 'te-IN',
-      speaker: 'shubh',
+      speaker: 'neha',
       output_audio_codec: 'linear16',
-      speech_sample_rate: 8000 // Set to 8000 Hz for Exotel
+      speech_sample_rate: 8000, // Set to 8000 Hz for Exotel
+      pace: 1.0,
+      temperature: 0.2
     }
   };
   console.log('Sending config:', JSON.stringify(config));

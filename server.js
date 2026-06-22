@@ -358,16 +358,24 @@ wss.on('connection', (ws) => {
 
     sarvamTtsWs.on('open', () => {
       console.log('Sarvam TTS connection opened successfully.');
+      
+      const speaker = process.env.SARVAM_SPEAKER || 'neha';
+      const pace = parseFloat(process.env.SARVAM_PACE || '1.0');
+      const temperature = parseFloat(process.env.SARVAM_TEMPERATURE || '0.2');
+
       // Send configuration message
       const config = {
         type: 'config',
         data: {
           target_language_code: 'te-IN',
-          speaker: 'priya',
+          speaker: speaker,
           output_audio_codec: 'linear16',
-          speech_sample_rate: 8000
+          speech_sample_rate: 8000,
+          pace: pace,
+          temperature: temperature
         }
       };
+      console.log(`Sending TTS Config: speaker=${speaker}, pace=${pace}, temp=${temperature}`);
       sarvamTtsWs.send(JSON.stringify(config));
       ttsConfigured = true;
       attemptGreeting();
