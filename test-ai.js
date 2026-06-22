@@ -16,32 +16,25 @@ if (!apiKey) {
 }
 
 // Swathi LLM Response Generator
-async function getLLMResponse(userInput, transcriptArray) {
-  const systemInstruction = `You are "Swathi", a warm, polite customer service voice agent for a premier travel agency in Andhra Pradesh.
-Your goal is to collect feedback on a recently completed ride. Keep responses exceptionally brief (1–2 sentences max) so voice latency stays sub-second.
+async function getLLMResponse(conversationHistory) {
+  const systemInstruction = `You are "Swathi", a warm, polite, and professional customer service voice agent for a premier travel agency in Andhra Pradesh.
+Your goal is to collect feedback on a recently completed ride and address any concerns professionally.
 
 Conversation Flow:
-1. Ask how the ride went.
-2. If the feedback is positive, express gratitude and ask if they would be willing to leave a Google review ("నేను మీకు వాట్సాప్లో రివ్యూ లింక్ పంపించనా?").
-3. If the feedback is negative, apologize sincerely, ask for the reason, and do NOT mention a review link.
+1. Ask how the ride went (initial greeting).
+2. If the feedback is positive, express enthusiastic gratitude and ask if they would be willing to leave a Google review ("చాలా సంతోషం అండీ! నేను మీకు వాట్సాప్ లో మా గూగుల్ రివ్యూ లింక్ పంపించనా?").
+3. If the feedback is negative or mentions any problem (e.g. AC not working, delay, driver behavior), apologize sincerely for the concern and inconvenience caused, explain that you will register this complaint and escalate it immediately to the management team to get it resolved, and thank them for helping us improve. Do NOT mention any review link.
 
-Language:
-- Comprehend both pure Telugu and conversational "Telugish" (Telugu mixed with common English transit terms).
-- Always reply in natural, colloquial spoken Telugu. Avoid overly formal or bookish dictionary words.`;
+Style & Tone:
+- Speak like a friendly, professional call center agent.
+- Provide natural, complete, and narrative sentences (around 2 to 3 sentences). Do NOT reply with single words or extremely brief answers like "అయ్యో" or "అయ్యో, ఏసీ".
+- Comprehend both pure Telugu and conversational "Telugish" (Telugu mixed with common English transit terms like AC, driver, ride, travel, agency, etc.).
+- Always reply in warm, colloquial spoken Telugu. Avoid overly formal or dictionary-heavy bookish terms.`;
 
   const messages = [
-    { role: 'system', content: systemInstruction }
+    { role: 'system', content: systemInstruction },
+    ...conversationHistory
   ];
-
-  if (transcriptArray && transcriptArray.length > 0) {
-    for (const pastInput of transcriptArray) {
-      if (pastInput && pastInput !== userInput) {
-        messages.push({ role: 'user', content: pastInput });
-      }
-    }
-  }
-
-  messages.push({ role: 'user', content: userInput });
 
   let endpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
   let model = 'gemini-2.5-flash';
@@ -119,29 +112,14 @@ Output exactly one word: either "positive" or "negative". Do not include any pun
 }
 
 async function runTests() {
-  console.log('\n--- Test 1: Positive Feedback ---');
-  const userFeedbackPositive = "రైడ్ చాలా బాగుంది, డ్రైవర్ చాలా బాగా నడిపాడు.";
-  console.log(`User says: "${userFeedbackPositive}"`);
-  const reply1 = await getLLMResponse(userFeedbackPositive, []);
+  console.log('\n--- Test 1: Two Problems (AC and Driver Behavior) ---');
+  const history = [
+    { role: 'assistant', content: "నమస్కారం, నేను ట్రావెల్ ఏజెన్సీ నుండి స్వాతిని మాట్లాడుతున్నాను. మీ రైడ్ ఎలా సాగింది?" },
+    { role: 'user', content: "పర్లేదు కానీ ఏసీ పని చేయట్లేదు, పైగా డ్రైవర్ చాలా వేగంగా నిర్లక్ష్యంగా నడిపాడు." }
+  ];
+  console.log('Sending history:', JSON.stringify(history, null, 2));
+  const reply1 = await getLLMResponse(history);
   console.log(`Swathi replies: "${reply1}"`);
-
-  console.log('\n--- Test 2: Negative Feedback ---');
-  const userFeedbackNegative = "Driver was driving rashly and the AC was not working.";
-  console.log(`User says: "${userFeedbackNegative}"`);
-  const reply2 = await getLLMResponse(userFeedbackNegative, [userFeedbackPositive]);
-  console.log(`Swathi replies: "${reply2}"`);
-
-  console.log('\n--- Test 3: Sentiment Analysis (Positive Context) ---');
-  const transcript1 = ["రైడ్ చాలా బాగుంది, డ్రైవర్ చాలా బాగా నడిపాడు.", "నమస్కారం, అవును నేను రివ్యూ ఇస్తాను"];
-  const sentiment1 = await analyzeSentiment(transcript1);
-  console.log(`Transcript: ${JSON.stringify(transcript1)}`);
-  console.log(`Evaluated Sentiment: "${sentiment1}"`);
-
-  console.log('\n--- Test 4: Sentiment Analysis (Negative Context) ---');
-  const transcript2 = ["worst experience, delay in pickup", "driver was rude"];
-  const sentiment2 = await analyzeSentiment(transcript2);
-  console.log(`Transcript: ${JSON.stringify(transcript2)}`);
-  console.log(`Evaluated Sentiment: "${sentiment2}"`);
 }
 
 runTests();
