@@ -229,6 +229,18 @@ wss.on('connection', (ws) => {
   let sarvamSttWs = null;
   let sarvamTtsWs = null;
 
+  let greetingSent = false;
+  let ttsConfigured = false;
+
+  function attemptGreeting() {
+    if (streamSid && ttsConfigured && !greetingSent) {
+      greetingSent = true;
+      setTimeout(() => {
+        sendInitialGreeting();
+      }, 500);
+    }
+  }
+
   // Helper to send the initial greeting
   function sendInitialGreeting() {
     const greetingText = "నమస్కారం, నేను ట్రావెల్ ఏజెన్సీ నుండి స్వాతిని మాట్లాడుతున్నాను. మీ రైడ్ ఎలా సాగింది?";
@@ -264,7 +276,7 @@ wss.on('connection', (ws) => {
   function initSarvamStt() {
     if (!sarvamApiKey) return;
 
-    const sttUrl = 'wss://api.sarvam.ai/speech-to-text/ws?model=saaras:v3';
+    const sttUrl = 'wss://api.sarvam.ai/speech-to-text/ws?model=saaras:v3&language-code=te-IN&mode=transcribe&sample_rate=8000';
     console.log(`Connecting to Sarvam STT WebSocket at: ${sttUrl}`);
 
     sarvamSttWs = new WebSocket(sttUrl, {
@@ -275,13 +287,6 @@ wss.on('connection', (ws) => {
 
     sarvamSttWs.on('open', () => {
       console.log('Sarvam STT connection opened successfully.');
-      // Send initial configuration payload
-      const config = {
-        model: 'saaras:v3',
-        language_code: 'te-IN',
-        mode: 'transcribe'
-      };
-      sarvamSttWs.send(JSON.stringify(config));
     });
 
     sarvamSttWs.on('message', async (data) => {
@@ -364,6 +369,8 @@ wss.on('connection', (ws) => {
         }
       };
       sarvamTtsWs.send(JSON.stringify(config));
+      ttsConfigured = true;
+      attemptGreeting();
     });
 
     sarvamTtsWs.on('message', (data) => {
@@ -423,18 +430,22 @@ wss.on('connection', (ws) => {
             callerId
           });
 
-          // Trigger initial greeting from Swathi once connection starts
-          setTimeout(() => {
-            sendInitialGreeting();
-          }, 1500);
+          // Trigger initial greeting logic
+          attemptGreeting();
           break;
 
         case 'media':
-          // Stream raw binary audio payloads directly to Sarvam STT
+          // Stream base64-encoded audio payloads wrapped in JSON to Sarvam STT
           if (msg.media && msg.media.payload) {
             if (sarvamSttWs && sarvamSttWs.readyState === WebSocket.OPEN) {
-              const audioBuffer = Buffer.from(msg.media.payload, 'base64');
-              sarvamSttWs.send(audioBuffer);
+              const audioMessage = {
+                audio: {
+                  data: msg.media.payload,
+                  sample_rate: 8000,
+                  encoding: 'audio/wav'
+                }
+              };
+              sarvamSttWs.send(JSON.stringify(audioMessage));
             }
           }
           break;
