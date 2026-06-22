@@ -73,7 +73,7 @@ dashboardWss.on('connection', (ws) => {
 });
 
 // LLM Response Generator using Chosen Provider (Gemini/OpenAI)
-async function getLLMResponse(userInput, transcriptArray) {
+async function getLLMResponse(conversationHistory) {
   const apiKey = process.env.LLM_API_KEY;
   if (!apiKey) {
     console.error('LLM_API_KEY is not defined in environment variables.');
@@ -95,20 +95,9 @@ Style & Tone:
 - Always reply in warm, colloquial spoken Telugu. Avoid overly formal or dictionary-heavy bookish terms.`;
 
   const messages = [
-    { role: 'system', content: systemInstruction }
+    { role: 'system', content: systemInstruction },
+    ...conversationHistory
   ];
-
-  // Reconstruct conversation history from transcriptArray
-  if (transcriptArray && transcriptArray.length > 0) {
-    for (const pastInput of transcriptArray) {
-      if (pastInput && pastInput !== userInput) {
-        messages.push({ role: 'user', content: pastInput });
-      }
-    }
-  }
-
-  // Add the current user input
-  messages.push({ role: 'user', content: userInput });
 
   const provider = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
   let endpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
@@ -234,6 +223,10 @@ wss.on('connection', (ws) => {
   let greetingSent = false;
   let ttsConfigured = false;
 
+  const conversationHistory = [];
+  let silenceTimer = null;
+  let currentTurnTranscript = '';
+
   function attemptGreeting() {
     if (streamSid && ttsConfigured && !greetingSent) {
       greetingSent = true;
@@ -246,6 +239,7 @@ wss.on('connection', (ws) => {
     const greetingText = "నమస్కారం, నేను ట్రావెల్ ఏజెన్సీ నుండి స్వాతిని మాట్లాడుతున్నాను. మీ రైడ్ ఎలా సాగింది?";
     console.log(`[Swathi Greeting]: ${greetingText}`);
     aiResponseLogs.push(greetingText);
+    conversationHistory.push({ role: 'assistant', content: greetingText });
 
     // Broadcast greeting to dashboard
     broadcastToDashboards('response', {
@@ -297,39 +291,68 @@ wss.on('connection', (ws) => {
         const text = msg.transcript || (msg.data && msg.data.transcript);
 
         if (text && text.trim()) {
-          console.log(`[STT Transcription]: ${text}`);
-          transcriptLogs.push(text);
-
-          // Broadcast user transcription to dashboard
-          broadcastToDashboards('transcription', {
-            streamSid,
-            text
-          });
-
-          // Get response from LLM Intelligence Layer
-          const aiResponse = await getLLMResponse(text, transcriptLogs);
-          console.log(`[LLM Response]: ${aiResponse}`);
-          aiResponseLogs.push(aiResponse);
-
-          // Broadcast bot response to dashboard
-          broadcastToDashboards('response', {
-            streamSid,
-            text: aiResponse
-          });
-
-          // Stream LLM response text to Sarvam TTS WebSocket
-          if (sarvamTtsWs && sarvamTtsWs.readyState === WebSocket.OPEN) {
-            const ttsMessage = {
-              type: 'text',
-              data: {
-                text: aiResponse
-              }
+          // Immediately send clear to Exotel to handle barge-in interruption
+          if (streamSid && ws.readyState === WebSocket.OPEN) {
+            const clearFrame = {
+              event: 'clear',
+              stream_sid: streamSid,
+              streamSid: streamSid
             };
-            sarvamTtsWs.send(JSON.stringify(ttsMessage));
-            sarvamTtsWs.send(JSON.stringify({ type: 'flush' }));
-          } else {
-            console.warn('Cannot synthesize TTS: Sarvam TTS WebSocket is not open.');
+            ws.send(JSON.stringify(clearFrame));
           }
+
+          // Accumulate the current transcript (cumulative update)
+          currentTurnTranscript = text;
+
+          // Debounce with an 800ms silence timer
+          if (silenceTimer) {
+            clearTimeout(silenceTimer);
+          }
+
+          silenceTimer = setTimeout(async () => {
+            const finalUtterance = currentTurnTranscript.trim();
+            currentTurnTranscript = ''; // Reset for next turn
+
+            if (finalUtterance) {
+              console.log(`[STT Final Utterance]: ${finalUtterance}`);
+              transcriptLogs.push(finalUtterance);
+
+              // Broadcast user transcription to dashboard
+              broadcastToDashboards('transcription', {
+                streamSid,
+                text: finalUtterance
+              });
+
+              // Add to LLM history
+              conversationHistory.push({ role: 'user', content: finalUtterance });
+
+              // Get response from LLM Intelligence Layer
+              const aiResponse = await getLLMResponse(conversationHistory);
+              console.log(`[LLM Response]: ${aiResponse}`);
+              aiResponseLogs.push(aiResponse);
+              conversationHistory.push({ role: 'assistant', content: aiResponse });
+
+              // Broadcast bot response to dashboard
+              broadcastToDashboards('response', {
+                streamSid,
+                text: aiResponse
+              });
+
+              // Stream LLM response text to Sarvam TTS WebSocket
+              if (sarvamTtsWs && sarvamTtsWs.readyState === WebSocket.OPEN) {
+                const ttsMessage = {
+                  type: 'text',
+                  data: {
+                    text: aiResponse
+                  }
+                };
+                sarvamTtsWs.send(JSON.stringify(ttsMessage));
+                sarvamTtsWs.send(JSON.stringify({ type: 'flush' }));
+              } else {
+                console.warn('Cannot synthesize TTS: Sarvam TTS WebSocket is not open.');
+              }
+            }
+          }, 800);
         }
       } catch (err) {
         console.error('Error processing Sarvam STT message:', err);
