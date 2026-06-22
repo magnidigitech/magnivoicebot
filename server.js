@@ -288,7 +288,8 @@ wss.on('connection', (ws) => {
         data: {
           target_language_code: 'te-IN',
           speaker: 'shubh',
-          output_audio_codec: 'linear16'
+          output_audio_codec: 'linear16',
+          speech_sample_rate: 8000
         }
       };
       sarvamTtsWs.send(JSON.stringify(config));
