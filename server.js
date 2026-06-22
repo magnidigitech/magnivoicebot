@@ -176,6 +176,25 @@ wss.on('connection', (ws) => {
   let sarvamSttWs = null;
   let sarvamTtsWs = null;
 
+  // Helper to send the initial greeting
+  function sendInitialGreeting() {
+    const greetingText = "నమస్కారం, నేను ట్రావెల్ ఏజెన్సీ నుండి స్వాతిని మాట్లాడుతున్నాను. మీ రైడ్ ఎలా సాగింది?";
+    console.log(`[Swathi Greeting]: ${greetingText}`);
+    aiResponseLogs.push(greetingText);
+
+    if (sarvamTtsWs && sarvamTtsWs.readyState === WebSocket.OPEN) {
+      const ttsMessage = {
+        type: 'audio',
+        data: {
+          text: greetingText
+        }
+      };
+      sarvamTtsWs.send(JSON.stringify(ttsMessage));
+    } else {
+      console.warn('Cannot send initial greeting: Sarvam TTS WebSocket is not open.');
+    }
+  }
+
   const sarvamApiKey = process.env.SARVAM_API_KEY;
 
   if (!sarvamApiKey) {
@@ -323,6 +342,11 @@ wss.on('connection', (ws) => {
           callSid = msg.start ? msg.start.call_sid : null;
           callerId = msg.start ? msg.start.from : null;
           console.log(`Exotel Call Start detected: stream_sid=${streamSid}, call_sid=${callSid}, callerId=${callerId}`);
+          
+          // Trigger initial greeting from Swathi once connection starts
+          setTimeout(() => {
+            sendInitialGreeting();
+          }, 1500);
           break;
 
         case 'media':
