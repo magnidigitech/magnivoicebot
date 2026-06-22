@@ -4,6 +4,8 @@ import http from 'http';
 import dotenv from 'dotenv';
 import axios from 'axios';
 import WebSocket from 'ws';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Load environment variables
 dotenv.config();
@@ -11,7 +13,19 @@ dotenv.config();
 const PORT = process.env.PORT || 3000;
 const app = express();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 app.use(express.json());
+
+// Serve static dashboard page at / or /dashboard
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
 
 // Basic health check route
 app.get('/health', (req, res) => {
@@ -20,8 +34,43 @@ app.get('/health', (req, res) => {
 
 const server = http.createServer(app);
 
-// Initialize a raw WebSocket Server
+// Initialize WebSocket Servers
 const wss = new WebSocketServer({ noServer: true });
+const dashboardWss = new WebSocketServer({ noServer: true });
+
+// Dashboard tracking state
+const dashboardClients = new Set();
+const stats = { active: 0, total: 0, positive: 0, negative: 0 };
+const callHistory = [];
+
+function broadcastToDashboards(event, data) {
+  const payload = JSON.stringify({ event, data });
+  for (const client of dashboardClients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+    }
+  }
+}
+
+// Handle dashboard connection
+dashboardWss.on('connection', (ws) => {
+  console.log('Dashboard client connected.');
+  dashboardClients.add(ws);
+
+  // Send initial state to the dashboard
+  ws.send(JSON.stringify({
+    event: 'init_state',
+    data: {
+      stats,
+      history: callHistory
+    }
+  }));
+
+  ws.on('close', () => {
+    console.log('Dashboard client disconnected.');
+    dashboardClients.delete(ws);
+  });
+});
 
 // LLM Response Generator using Chosen Provider (Gemini/OpenAI)
 async function getLLMResponse(userInput, transcriptArray) {
@@ -146,13 +195,17 @@ Output exactly one word: either "positive" or "negative". Do not include any pun
   }
 }
 
-// Upgrade HTTP connection on /voice to WebSocket
+// Upgrade HTTP connection to appropriate WebSocket Server
 server.on('upgrade', (request, socket, head) => {
   try {
     const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
     if (pathname === '/voice') {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
+      });
+    } else if (pathname === '/dashboard-ws') {
+      dashboardWss.handleUpgrade(request, socket, head, (ws) => {
+        dashboardWss.emit('connection', ws, request);
       });
     } else {
       socket.destroy();
@@ -181,6 +234,12 @@ wss.on('connection', (ws) => {
     const greetingText = "నమస్కారం, నేను ట్రావెల్ ఏజెన్సీ నుండి స్వాతిని మాట్లాడుతున్నాను. మీ రైడ్ ఎలా సాగింది?";
     console.log(`[Swathi Greeting]: ${greetingText}`);
     aiResponseLogs.push(greetingText);
+
+    // Broadcast greeting to dashboard
+    broadcastToDashboards('response', {
+      streamSid,
+      text: greetingText
+    });
 
     if (sarvamTtsWs && sarvamTtsWs.readyState === WebSocket.OPEN) {
       const ttsMessage = {
@@ -235,10 +294,22 @@ wss.on('connection', (ws) => {
           console.log(`[STT Transcription]: ${text}`);
           transcriptLogs.push(text);
 
+          // Broadcast user transcription to dashboard
+          broadcastToDashboards('transcription', {
+            streamSid,
+            text
+          });
+
           // Get response from LLM Intelligence Layer
           const aiResponse = await getLLMResponse(text, transcriptLogs);
           console.log(`[LLM Response]: ${aiResponse}`);
           aiResponseLogs.push(aiResponse);
+
+          // Broadcast bot response to dashboard
+          broadcastToDashboards('response', {
+            streamSid,
+            text: aiResponse
+          });
 
           // Stream LLM response text to Sarvam TTS WebSocket
           if (sarvamTtsWs && sarvamTtsWs.readyState === WebSocket.OPEN) {
@@ -343,6 +414,15 @@ wss.on('connection', (ws) => {
           callerId = msg.start ? msg.start.from : null;
           console.log(`Exotel Call Start detected: stream_sid=${streamSid}, call_sid=${callSid}, callerId=${callerId}`);
           
+          // Update active stats and broadcast to dashboard
+          stats.active = 1;
+          stats.total += 1;
+          broadcastToDashboards('call_start', {
+            streamSid,
+            callSid,
+            callerId
+          });
+
           // Trigger initial greeting from Swathi once connection starts
           setTimeout(() => {
             sendInitialGreeting();
@@ -403,13 +483,40 @@ wss.on('connection', (ws) => {
       }
     }
 
+    // Run sentiment analysis and compile results
+    let sentiment = 'negative';
+    try {
+      console.log('Analyzing call sentiment...');
+      sentiment = await analyzeSentiment(transcriptLogs);
+    } catch (e) {
+      console.error('Error analyzing sentiment:', e.message);
+    }
+
+    // Update history tracking
+    stats.active = 0;
+    if (sentiment === 'positive') stats.positive += 1;
+    else stats.negative += 1;
+
+    const formattedTranscript = transcriptLogs.map((t, idx) => `User: ${t}\nSwathi: ${aiResponseLogs[idx] || ''}`).join('\n');
+    callHistory.unshift({
+      caller_id: callerId,
+      stream_sid: streamSid,
+      timestamp: new Date().toISOString(),
+      sentiment,
+      transcript: formattedTranscript
+    });
+    if (callHistory.length > 20) callHistory.pop();
+
+    // Broadcast call end to dashboard
+    broadcastToDashboards('call_close', {
+      streamSid,
+      sentiment
+    });
+
     // Prepare and dispatch the call summary to N8N webhook
     const webhookUrl = process.env.N8N_WEBHOOK_URL;
     if (webhookUrl) {
       try {
-        console.log('Analyzing call sentiment...');
-        const sentiment = await analyzeSentiment(transcriptLogs);
-
         const payload = {
           caller_id: callerId,
           stream_sid: streamSid,

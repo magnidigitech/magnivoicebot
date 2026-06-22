@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magnivoicebot Live Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f0c20 0%, #15102a 50%, #06020f 100%);
+      --panel-bg: rgba(25, 20, 45, 0.45);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --glow-color: rgba(99, 102, 241, 0.15);
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3 {
+      font-family: 'Outfit', sans-serif;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--panel-border);
+      backdrop-filter: blur(12px);
+      background: rgba(15, 12, 32, 0.6);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-glow {
+      width: 12px;
+      height: 12px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--accent);
+      animation: pulse-glow 2s infinite;
+    }
+
+    .logo-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #fff 0%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--success);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--success);
+      border-radius: 50%;
+      animation: pulse-dot 1.5s infinite;
+    }
+
+    .status-badge.disconnected {
+      color: var(--error);
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    .status-badge.disconnected .status-dot {
+      background: var(--error);
+      animation: none;
+    }
+
+    main {
+      flex: 1;
+      padding: 2rem;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    /* Grid layout for stats cards */
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+
+    .stat-card.active-card::before {
+      background: linear-gradient(90deg, var(--warning), transparent);
+    }
+
+    .stat-card.positive-card::before {
+      background: linear-gradient(90deg, var(--success), transparent);
+    }
+
+    .stat-card.negative-card::before {
+      background: linear-gradient(90deg, var(--error), transparent);
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-top: 0.5rem;
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    /* Grid for Console and logs */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 2rem;
+      min-height: 550px;
+    }
+
+    @media (max-width: 1024px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      height: 620px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(25, 20, 45, 0.2);
+    }
+
+    .panel-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .pulse-ring-container {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .pulse-ring {
+      width: 8px;
+      height: 8px;
+      background: var(--warning);
+      border-radius: 50%;
+    }
+
+    .pulse-ring.active {
+      animation: pulse-ring-anim 1.5s infinite;
+    }
+
+    .panel-body {
+      flex: 1;
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      scroll-behavior: smooth;
+    }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: auto;
+      text-align: center;
+      gap: 1rem;
+      color: var(--text-muted);
+    }
+
+    .empty-radar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 2px solid rgba(99, 102, 241, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .empty-radar::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      animation: radar-grow 2s linear infinite;
+      box-shadow: 0 0 12px var(--glow-color);
+    }
+
+    .empty-icon {
+      width: 12px;
+      height: 12px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+
+    /* Chat bubble styles */
+    .bubble-wrapper {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      animation: bubble-fade 0.3s ease-out;
+    }
+
+    .bubble-header {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      padding: 0 0.5rem;
+    }
+
+    .bubble {
+      max-width: 80%;
+      padding: 0.9rem 1.2rem;
+      border-radius: 18px;
+      font-size: 0.95rem;
+      line-height: 1.45;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .bubble-user {
+      align-self: flex-start;
+      .bubble {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-top-left-radius: 2px;
+      }
+      .bubble-header {
+        align-self: flex-start;
+      }
+    }
+
+    .bubble-bot {
+      align-self: flex-end;
+      .bubble {
+        background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%);
+        border-top-right-radius: 2px;
+      }
+      .bubble-header {
+        align-self: flex-end;
+      }
+    }
+
+    /* Call details bar */
+    .call-meta-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--panel-border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .call-meta-item span {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    /* Call History styling */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .history-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 1rem;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+
+    .history-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .history-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .history-caller {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .history-badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .history-badge.positive {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .history-badge.negative {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--error);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+
+    .history-details {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .history-expanded-transcript {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed rgba(255, 255, 255, 0.08);
+      font-size: 0.85rem;
+      line-height: 1.4;
+      color: #d1d5db;
+      display: none;
+    }
+
+    /* Keyframe Animations */
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 12px var(--accent); }
+      50% { box-shadow: 0 0 24px var(--accent); }
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.7; }
+    }
+
+    @keyframes pulse-ring-anim {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+      70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+
+    @keyframes radar-grow {
+      0% { transform: scale(0.6); opacity: 0.8; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+
+    @keyframes bubble-fade {
+      from { transform: translateY(8px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo-container">
+      <div class="logo-glow"></div>
+      <div class="logo-text">Magnivoicebot</div>
+    </div>
+    <div id="connectionStatus" class="status-badge disconnected">
+      <div class="status-dot"></div>
+      <span id="connectionText">Connecting...</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Stats Row -->
+    <div class="stats-container">
+      <div class="stat-card active-card">
+        <div class="stat-label">Active Calls</div>
+        <div class="stat-value" id="statActive">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Calls Today</div>
+        <div class="stat-value" id="statTotal">0</div>
+      </div>
+      <div class="stat-card positive-card">
+        <div class="stat-label">Positive Sentiment</div>
+        <div class="stat-value" id="statPositive">0</div>
+      </div>
+      <div class="stat-card negative-card">
+        <div class="stat-label">Negative Sentiment</div>
+        <div class="stat-value" id="statNegative">0</div>
+      </div>
+    </div>
+
+    <!-- Live Console & Call History -->
+    <div class="content-grid">
+      <!-- Live Call Console -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="pulse-ring-container">
+              <div class="pulse-ring" id="livePulse"></div>
+            </div>
+            Live Call Console
+          </div>
+          <span id="callStatusIndicator" style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted);">Standby</span>
+        </div>
+        <div class="call-meta-bar" id="liveCallMeta" style="display: none;">
+          <div class="call-meta-item">Caller ID: <span id="metaCaller">---</span></div>
+          <div class="call-meta-item">Stream SID: <span id="metaStream">---</span></div>
+        </div>
+        <div class="panel-body" id="consoleBody">
+          <div class="empty-state" id="consoleEmptyState">
+            <div class="empty-radar">
+              <div class="empty-icon"></div>
+            </div>
+            <p>Radar Listening... Waiting for calls</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Call History Log -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Recent Call Logs</div>
+          <span style="font-size: 0.85rem; color: var(--text-muted);" id="historyCount">0 calls</span>
+        </div>
+        <div class="panel-body" id="historyBody">
+          <div class="empty-state" id="historyEmptyState">
+            <p>No completed call logs yet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let ws;
+    let activeCallSid = null;
+    let stats = {
+      active: 0,
+      total: 0,
+      positive: 0,
+      negative: 0
+    };
+    let completedCalls = [];
+
+    const connectionStatus = document.getElementById('connectionStatus');
+    const connectionText = document.getElementById('connectionText');
+    const consoleBody = document.getElementById('consoleBody');
+    const consoleEmptyState = document.getElementById('consoleEmptyState');
+    const historyBody = document.getElementById('historyBody');
+    const historyEmptyState = document.getElementById('historyEmptyState');
+    
+    const liveCallMeta = document.getElementById('liveCallMeta');
+    const metaCaller = document.getElementById('metaCaller');
+    const metaStream = document.getElementById('metaStream');
+    
+    const statActive = document.getElementById('statActive');
+    const statTotal = document.getElementById('statTotal');
+    const statPositive = document.getElementById('statPositive');
+    const statNegative = document.getElementById('statNegative');
+    const livePulse = document.getElementById('livePulse');
+    const callStatusIndicator = document.getElementById('callStatusIndicator');
+    const historyCount = document.getElementById('historyCount');
+
+    function connectWS() {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const wsUrl = `${proto}//${host}/dashboard-ws`;
+      
+      console.log(`Connecting to dashboard WebSocket at: ${wsUrl}`);
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log('Dashboard WebSocket connection established.');
+        connectionStatus.className = 'status-badge';
+        connectionText.textContent = 'Live Connected';
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          handleEvent(payload);
+        } catch (err) {
+          console.error('Error handling WebSocket message:', err);
+        }
+      };
+
+      ws.onclose = () => {
+        console.warn('Dashboard WebSocket connection lost. Reconnecting in 3s...');
+        connectionStatus.className = 'status-badge disconnected';
+        connectionText.textContent = 'Disconnected';
+        setTimeout(connectWS, 3000);
+      };
+
+      ws.onerror = (err) => {
+        console.error('WebSocket Error:', err);
+      };
+    }
+
+    function handleEvent(message) {
+      const { event, data } = message;
+      console.log(`Received event: ${event}`, data);
+
+      if (event === 'init_state') {
+        // Load initial state from server
+        stats = data.stats;
+        completedCalls = data.history || [];
+        updateStatsUI();
+        renderHistory();
+      }
+
+      if (event === 'call_start') {
+        activeCallSid = data.callSid || data.streamSid;
+        stats.active = 1;
+        stats.total += 1;
+        updateStatsUI();
+
+        // Clear console and show metadata
+        consoleBody.innerHTML = '';
+        consoleEmptyState.style.display = 'none';
+        liveCallMeta.style.display = 'flex';
+        metaCaller.textContent = data.callerId || 'Unknown';
+        metaStream.textContent = data.streamSid || '---';
+        
+        livePulse.className = 'pulse-ring active';
+        callStatusIndicator.textContent = 'Call Active';
+        callStatusIndicator.style.color = 'var(--warning)';
+
+        // Add Swathi Greeting instantly
+        addBubble('Swathi (TTS)', 'నమస్కారం, నేను ట్రావెల్ ఏజెన్సీ నుండి స్వాతిని మాట్లాడుతున్నాను. మీ రైడ్ ఎలా సాగింది?', 'bot');
+      }
+
+      if (event === 'transcription') {
+        addBubble('User (STT)', data.text, 'user');
+      }
+
+      if (event === 'response') {
+        addBubble('Swathi (TTS)', data.text, 'bot');
+      }
+
+      if (event === 'call_close') {
+        stats.active = 0;
+        if (data.sentiment === 'positive') stats.positive += 1;
+        if (data.sentiment === 'negative') stats.negative += 1;
+        updateStatsUI();
+
+        // Standby indicators
+        livePulse.className = 'pulse-ring';
+        callStatusIndicator.textContent = 'Standby';
+        callStatusIndicator.style.color = 'var(--text-muted)';
+        
+        // Move current call to logs
+        const completedCall = {
+          caller_id: metaCaller.textContent,
+          stream_sid: metaStream.textContent,
+          timestamp: new Date().toISOString(),
+          sentiment: data.sentiment,
+          transcript: gatherCurrentTranscript()
+        };
+        completedCalls.unshift(completedCall);
+        renderHistory();
+
+        // Reset console UI after a small delay
+        setTimeout(() => {
+          if (stats.active === 0) {
+            consoleBody.innerHTML = '';
+            consoleBody.appendChild(consoleEmptyState);
+            consoleEmptyState.style.display = 'flex';
+            liveCallMeta.style.display = 'none';
+          }
+        }, 5000);
+      }
+    }
+
+    function addBubble(sender, text, type) {
+      // Avoid showing duplicate empty bubbles
+      if (!text || !text.trim()) return;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = `bubble-wrapper bubble-${type}`;
+      
+      const header = document.createElement('div');
+      header.className = 'bubble-header';
+      header.textContent = sender;
+      
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = text;
+      
+      wrapper.appendChild(header);
+      wrapper.appendChild(bubble);
+      consoleBody.appendChild(wrapper);
+      
+      // Auto scroll to bottom
+      consoleBody.scrollTop = consoleBody.scrollHeight;
+    }
+
+    function gatherCurrentTranscript() {
+      const bubbles = consoleBody.querySelectorAll('.bubble-wrapper');
+      const lines = [];
+      bubbles.forEach(b => {
+        const sender = b.querySelector('.bubble-header').textContent;
+        const text = b.querySelector('.bubble').textContent;
+        lines.push(`${sender}: ${text}`);
+      });
+      return lines.join('\n');
+    }
+
+    function updateStatsUI() {
+      statActive.textContent = stats.active;
+      statTotal.textContent = stats.total;
+      statPositive.textContent = stats.positive;
+      statNegative.textContent = stats.negative;
+    }
+
+    function renderHistory() {
+      if (completedCalls.length === 0) {
+        historyEmptyState.style.display = 'flex';
+        historyBody.innerHTML = '';
+        historyBody.appendChild(historyEmptyState);
+        historyCount.textContent = '0 calls';
+        return;
+      }
+
+      historyEmptyState.style.display = 'none';
+      historyBody.innerHTML = '';
+      
+      const list = document.createElement('div');
+      list.className = 'history-list';
+
+      completedCalls.forEach((call, index) => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        
+        const dateStr = new Date(call.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const sentimentClass = call.sentiment === 'positive' ? 'positive' : 'negative';
+
+        item.innerHTML = `
+          <div class="history-top">
+            <span class="history-caller">${call.caller_id || 'Unknown Caller'}</span>
+            <span class="history-badge ${sentimentClass}">${call.sentiment || 'negative'}</span>
+          </div>
+          <div class="history-details">
+            <span>SID: ${call.stream_sid ? call.stream_sid.slice(0, 15) + '...' : '---'}</span>
+            <span>${dateStr}</span>
+          </div>
+          <div class="history-expanded-transcript" id="expanded-${index}">
+            <strong>Transcript Summary:</strong><br>
+            ${call.transcript ? call.transcript.replace(/\n/g, '<br>') : 'No transcript recorded.'}
+          </div>
+        `;
+
+        item.addEventListener('click', () => {
+          const el = document.getElementById(`expanded-${index}`);
+          if (el.style.display === 'block') {
+            el.style.display = 'none';
+          } else {
+            el.style.display = 'block';
+          }
+        });
+
+        list.appendChild(item);
+      });
+
+      historyBody.appendChild(list);
+      historyCount.textContent = `${completedCalls.length} call${completedCalls.length > 1 ? 's' : ''}`;
+    }
+
+    // Initialize Connection
+    connectWS();
+  </script>
+</body>
+</html>
