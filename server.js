@@ -219,7 +219,7 @@ wss.on('connection', (ws) => {
       // Send initial configuration payload
       const config = {
         model: 'saaras:v3',
-        language_code: 'en-IN',
+        language_code: 'te-IN',
         mode: 'transcribe'
       };
       sarvamSttWs.send(JSON.stringify(config));
@@ -287,7 +287,7 @@ wss.on('connection', (ws) => {
         type: 'config',
         data: {
           target_language_code: 'te-IN',
-          speaker: 'shubh',
+          speaker: 'priya',
           output_audio_codec: 'linear16',
           speech_sample_rate: 8000
         }
