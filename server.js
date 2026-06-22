@@ -291,16 +291,6 @@ wss.on('connection', (ws) => {
         const text = msg.transcript || (msg.data && msg.data.transcript);
 
         if (text && text.trim()) {
-          // Immediately send clear to Exotel to handle barge-in interruption
-          if (streamSid && ws.readyState === WebSocket.OPEN) {
-            const clearFrame = {
-              event: 'clear',
-              stream_sid: streamSid,
-              streamSid: streamSid
-            };
-            ws.send(JSON.stringify(clearFrame));
-          }
-
           // Accumulate the current transcript (cumulative update)
           currentTurnTranscript = text;
 
