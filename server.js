@@ -163,6 +163,24 @@ function getKeywordResponse(userInput) {
   };
 }
 
+// Filter out background noise, single syllables, and repetitive filler phrases
+function isNoiseUtterance(text) {
+  const clean = text.toLowerCase().trim().replace(/[.,?/#!$%^&*;:{}=\-_`~()]/g, "");
+  if (!clean) return true;
+
+  const words = clean.split(/\s+/);
+  const noiseWords = [
+    'um', 'umm', 'ummm', 'ummmm', 'ummmmm',
+    'hm', 'hmm', 'hmmm', 'hmmmm', 'hmmmmm',
+    'uh', 'uhh', 'oh', 'ohh',
+    'ఉమ్', 'ఉమ్మ్', 'ఉమ్మ్మ్', 'ఉహ్', 'ఉహ్హ్',
+    'ఒకే', 'ఓకే', 'ok', 'okay', 'okk',
+    'హు', 'హుమ్', 'మ్మ్', 'మ్', 'మ్మ్మ్'
+  ];
+
+  return words.every(w => noiseWords.includes(w));
+}
+
 // Upgrade HTTP connection to appropriate WebSocket Server
 server.on('upgrade', (request, socket, head) => {
   try {
@@ -282,6 +300,12 @@ wss.on('connection', (ws) => {
             currentTurnTranscript = ''; // Reset for next turn
 
             if (finalUtterance) {
+              // Ignore background noise, throat clearing, or filler-only phrases
+              if (isNoiseUtterance(finalUtterance)) {
+                console.log(`[STT Ignored Filler/Noise]: "${finalUtterance}"`);
+                return;
+              }
+
               console.log(`[STT Final Utterance]: ${finalUtterance}`);
               transcriptLogs.push(finalUtterance);
 
@@ -294,7 +318,16 @@ wss.on('connection', (ws) => {
               // Get response locally using keyword trigger system
               const responseData = getKeywordResponse(finalUtterance);
               const aiResponse = responseData.speech;
-              finalActionTag = responseData.action_tag;
+              
+              // Prevent negative tickets from being downgraded back to positive review tags
+              const newActionTag = responseData.action_tag;
+              const isCurrentTagNegative = finalActionTag === 'escalate_to_crm' || finalActionTag === 'log_maintenance_ticket';
+              
+              if (!isCurrentTagNegative) {
+                finalActionTag = newActionTag;
+              } else if (newActionTag === 'escalate_to_crm' || newActionTag === 'log_maintenance_ticket') {
+                finalActionTag = newActionTag; // Allow switching between negative tags
+              }
               
               console.log(`[Keyword Response]: ${aiResponse} (action_tag: ${finalActionTag})`);
               aiResponseLogs.push(aiResponse);
