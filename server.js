@@ -47,7 +47,7 @@ async function triggerExotelOutboundCall(phoneNumber) {
 
   const auth = Buffer.from(`${apiKey}:${apiToken}`).toString('base64');
   const endpoint = `https://${subdomain}/v1/Accounts/${accountSid}/Calls/connect.json`;
-  
+
   const params = new URLSearchParams();
   params.append('From', phoneNumber);
   params.append('CallerId', callerId);
@@ -108,7 +108,7 @@ async function dialNextInQueue() {
     console.log(`Queue dialer: Dialing next customer: ${item.phone}`);
     const data = await triggerExotelOutboundCall(item.phone);
     console.log(`Queue dialer: Successfully triggered call for ${item.phone}`);
-    
+
     if (data && data.Call && data.Call.Sid) {
       item.callSid = data.Call.Sid;
     }
@@ -134,10 +134,10 @@ app.post('/api/trigger-call', async (req, res) => {
 
   try {
     const data = await triggerExotelOutboundCall(phoneNumber);
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Call initiated successfully.', 
-      data: data 
+    return res.status(200).json({
+      success: true,
+      message: 'Call initiated successfully.',
+      data: data
     });
   } catch (err) {
     console.error('Failed to trigger Exotel outbound call:', err.message);
@@ -163,10 +163,10 @@ app.post('/api/upload-queue', (req, res) => {
   console.log(`Uploaded ${newItems.length} numbers to the call queue. Total size: ${callQueue.length}`);
   broadcastQueueState();
 
-  return res.status(200).json({ 
-    success: true, 
-    message: `Added ${newItems.length} numbers to the queue.`, 
-    queue: callQueue 
+  return res.status(200).json({
+    success: true,
+    message: `Added ${newItems.length} numbers to the queue.`,
+    queue: callQueue
   });
 });
 
@@ -185,10 +185,10 @@ app.post('/api/queue/start', (req, res) => {
   }
   queueActive = true;
   broadcastQueueState();
-  
+
   // Start dialing
   dialNextInQueue();
-  
+
   return res.status(200).json({ success: true, message: 'Queue dialing started.' });
 });
 
@@ -430,7 +430,7 @@ function getKeywordResponse(userInput, lang = 'te') {
         }
 
         const speech = `అయ్యో, అవునా అండీ... జర్నీలో ${joinedIssues} వల్ల మీకు ఇబ్బంది కలిగినందుకు చాలా సారీ అండీ. నేను ఇప్పుడే ఈ కంప్లైంట్స్ అన్నీ నోట్ చేసుకుంటున్నాను, కచ్చితంగా మా టీమ్ తో మాట్లాడి సాల్వ్ చేయిస్తాం అండీ.`;
-        
+
         return {
           speech,
           action_tag: finalTag
@@ -563,8 +563,8 @@ wss.on('connection', (ws) => {
   // Helper to dynamically update TTS language and speaker configuration
   function updateTtsConfig(lang) {
     if (sarvamTtsWs && sarvamTtsWs.readyState === WebSocket.OPEN) {
-      const speaker = lang === 'en' 
-        ? (process.env.SARVAM_SPEAKER_EN || 'neha') 
+      const speaker = lang === 'en'
+        ? (process.env.SARVAM_SPEAKER_EN || 'neha')
         : (process.env.SARVAM_SPEAKER_TE || 'neha');
       const targetLangCode = lang === 'en' ? 'en-IN' : 'te-IN';
       const pace = parseFloat(process.env.SARVAM_PACE || '1.35');
@@ -706,74 +706,74 @@ wss.on('connection', (ws) => {
 
               if (dialogState === 'language_negotiation') {
                 const utteranceLower = finalUtterance.toLowerCase();
-                const prefersTelugu = utteranceLower.includes('telugu') || 
-                                      utteranceLower.includes('తెలుగు') || 
-                                      /[\u0c00-\u0c7f]/.test(finalUtterance);
-                                      
-                const prefersEnglish = utteranceLower.includes('english') || 
-                                       utteranceLower.includes('inglis') || 
-                                       utteranceLower.includes('comfortable');
+                const prefersTelugu = utteranceLower.includes('telugu') ||
+                  utteranceLower.includes('తెలుగు') ||
+                  /[\u0c00-\u0c7f]/.test(finalUtterance);
+
+                const prefersEnglish = utteranceLower.includes('english') ||
+                  utteranceLower.includes('inglis') ||
+                  utteranceLower.includes('comfortable');
 
                 if (prefersTelugu) {
                   currentLanguage = 'te';
                   dialogState = 'journey_feedback';
-                  
+
                   // Update TTS to use Telugu configuration
                   updateTtsConfig('te');
-                  
+
                   const aiResponse = "సరేనండీ, తెలుగులోనే మాట్లాడుకుందాం. నిన్న మన ప్రముఖ్ ట్రావెల్స్ లో మీ జర్నీ ఎలా జరిగింది అండీ? అంతా బాగుందా?";
                   console.log(`[Dialog State]: Negotiated language: Telugu. Response: ${aiResponse}`);
                   aiResponseLogs.push(aiResponse);
-                  
+
                   broadcastToDashboards('response', {
                     streamSid,
                     text: aiResponse
                   });
-                  
+
                   streamTtsResponse(aiResponse);
                 } else if (prefersEnglish || /^[a-zA-Z0-9\s,.'?!\-()]+$/.test(finalUtterance)) {
                   currentLanguage = 'en';
                   dialogState = 'journey_feedback';
-                  
+
                   // Update TTS to use English configuration
                   updateTtsConfig('en');
-                  
+
                   const aiResponse = "Great! Let's continue in English. How was your journey yesterday with Pramukh Travels? Was it comfortable?";
                   console.log(`[Dialog State]: Negotiated language: English. Response: ${aiResponse}`);
                   aiResponseLogs.push(aiResponse);
-                  
+
                   broadcastToDashboards('response', {
                     streamSid,
                     text: aiResponse
                   });
-                  
+
                   streamTtsResponse(aiResponse);
                 } else {
                   const aiResponse = "Sorry, which language do you prefer? English or Telugu?";
                   console.log(`[Dialog State]: Ambiguous language negotiation. Repeating question.`);
                   aiResponseLogs.push(aiResponse);
-                  
+
                   broadcastToDashboards('response', {
                     streamSid,
                     text: aiResponse
                   });
-                  
+
                   streamTtsResponse(aiResponse);
                 }
               } else {
                 // dialogState === 'journey_feedback'
                 const responseData = getKeywordResponse(finalUtterance, currentLanguage);
                 const aiResponse = responseData.speech;
-                
+
                 const newActionTag = responseData.action_tag;
                 const isCurrentTagNegative = finalActionTag === 'escalate_to_crm' || finalActionTag === 'log_maintenance_ticket';
-                
+
                 if (!isCurrentTagNegative) {
                   finalActionTag = newActionTag;
                 } else if (newActionTag === 'escalate_to_crm' || newActionTag === 'log_maintenance_ticket') {
                   finalActionTag = newActionTag;
                 }
-                
+
                 console.log(`[Keyword Response]: ${aiResponse} (action_tag: ${finalActionTag})`);
                 aiResponseLogs.push(aiResponse);
 
@@ -816,7 +816,7 @@ wss.on('connection', (ws) => {
 
     sarvamTtsWs.on('open', () => {
       console.log('Sarvam TTS connection opened successfully.');
-      
+
       const speakerEn = process.env.SARVAM_SPEAKER_EN || 'neha';
       const pace = parseFloat(process.env.SARVAM_PACE || '1.35');
       const temperature = parseFloat(process.env.SARVAM_TEMPERATURE || '0.2');
@@ -921,7 +921,7 @@ wss.on('connection', (ws) => {
           callSid = msg.start ? msg.start.call_sid : null;
           callerId = msg.start ? msg.start.from : null;
           console.log(`Exotel Call Start detected: stream_sid=${streamSid}, call_sid=${callSid}, callerId=${callerId}`);
-          
+
           // Update active stats and broadcast to dashboard
           stats.active = 1;
           stats.total += 1;
@@ -943,7 +943,7 @@ wss.on('connection', (ws) => {
                 audio: {
                   data: msg.media.payload,
                   sample_rate: 8000,
-                  encoding: 'pcm_s16le'
+                  encoding: 'audio/wav'
                 }
               };
               sarvamSttWs.send(JSON.stringify(audioMessage));
