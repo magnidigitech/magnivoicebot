@@ -32,6 +32,64 @@ app.get('/health', (req, res) => {
   res.status(200).send({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Outbound Call Trigger Route
+app.post('/api/trigger-call', async (req, res) => {
+  const { phoneNumber } = req.body;
+  if (!phoneNumber) {
+    return res.status(400).json({ error: 'Phone number is required.' });
+  }
+
+  const apiKey = process.env.EXOTEL_API_KEY;
+  const apiToken = process.env.EXOTEL_API_TOKEN;
+  const accountSid = process.env.EXOTEL_ACCOUNT_SID;
+  const callerId = process.env.EXOTEL_VIRTUAL_NUMBER;
+  const flowUrl = process.env.EXOTEL_FLOW_URL;
+  const subdomain = process.env.EXOTEL_SUBDOMAIN || 'api.exotel.com';
+
+  if (!apiKey || !apiToken || !accountSid || !callerId || !flowUrl) {
+    return res.status(500).json({ 
+      error: 'Exotel API credentials are not fully configured. Please set EXOTEL_ACCOUNT_SID, EXOTEL_VIRTUAL_NUMBER, and EXOTEL_FLOW_URL in your env.' 
+    });
+  }
+
+  try {
+    const auth = Buffer.from(`${apiKey}:${apiToken}`).toString('base64');
+    const endpoint = `https://${subdomain}/v1/Accounts/${accountSid}/Calls/connect.json`;
+    
+    const params = new URLSearchParams();
+    params.append('From', phoneNumber);
+    params.append('CallerId', callerId);
+    params.append('Url', flowUrl);
+    params.append('CallType', 'trans');
+
+    console.log(`Triggering Exotel outbound call to: ${phoneNumber} via ${endpoint}`);
+
+    const response = await axios.post(endpoint, params.toString(), {
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      timeout: 10000
+    });
+
+    console.log('Exotel outbound response:', response.data);
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Call initiated successfully.', 
+      data: response.data 
+    });
+  } catch (err) {
+    console.error('Failed to trigger Exotel outbound call:', err.message);
+    if (err.response) {
+      console.error('Exotel Error Response:', JSON.stringify(err.response.data));
+      return res.status(err.response.status).json({ 
+        error: `Exotel API error: ${JSON.stringify(err.response.data)}` 
+      });
+    }
+    return res.status(500).json({ error: `Connection failed: ${err.message}` });
+  }
+});
+
 const server = http.createServer(app);
 
 // Initialize WebSocket Servers
