@@ -72,96 +72,94 @@ dashboardWss.on('connection', (ws) => {
   });
 });
 
-// Local keyword-triggered response engine (Instant, 0ms latency, zero API costs/rate limits)
-function getKeywordResponse(userInput) {
-  const input = userInput.toLowerCase();
-
-  // 1. AC Issues
-  if (input.includes('ac') || input.includes('ఏసీ') || input.includes('ఉక్క') || input.includes('కూలింగ్') || input.includes('cooling') || input.includes('వేడి') || input.includes('heat')) {
-    return {
+// Issue categories configuration for dynamic multi-issue apologies
+const ISSUE_CATEGORIES = [
+  {
+    id: 'ac',
+    keywords: ['ac', 'ఏసీ', 'ఉక్క', 'కూలింగ్', 'cooling', 'వేడి', 'heat'],
+    phrase: "ఏసీ ప్రాబ్లం",
+    action_tag: "log_maintenance_ticket",
+    originalResponse: {
       speech: "ఓహ్, ఏసీ ప్రాబ్లం వచ్చిందా అండీ... జర్నీలో అది చాలా ఇబ్బంది కదా, సారీ అండీ. నేను ఈ కంప్లైంట్ ని మా మెయింటెనెన్స్ టీమ్ కి పంపిస్తున్నాను... నెక్స్ట్ ట్రిప్ కి ఆ బస్సు ని కంప్లీట్ గా చెక్ చేయిస్తాము అండీ.",
       action_tag: "log_maintenance_ticket"
-    };
-  }
-
-  // 2. Conductor / Extortion / Extra Money
-  if (input.includes('కండక్టర్') || input.includes('conductor') || input.includes('ఎక్స్ట్రా') || input.includes('extra') || input.includes('డబ్బులు') || input.includes('మనీ') || input.includes('money') || input.includes('లంచం')) {
-    return {
+    }
+  },
+  {
+    id: 'conductor',
+    keywords: ['కండక్టర్', 'conductor', 'ఎక్స్ట్రా', 'extra', 'డబ్బులు', 'మనీ', 'money', 'లంచం'],
+    phrase: "కండక్టర్ ప్రవర్తన",
+    action_tag: "escalate_to_crm",
+    originalResponse: {
       speech: "బాబోయ్... ఎక్స్ట్రా మనీ అడగడం ఏంటండీ? మా ట్రావెల్స్ లో అలా అస్సలు తీసుకోకూడదు. ఆ కండక్టర్ గురించి నేను ఇప్పుడే కంప్లైంట్ లాగ్ చేస్తున్నాను... దీనిపై కచ్చితంగా యాక్షన్ తీసుకుంటాం అండీ, సారీ ఫర్ దట్.",
       action_tag: "escalate_to_crm"
-    };
-  }
-
-  // 3. Driver Behavior / Rough Driving
-  if (input.includes('డ్రైవర్') || input.includes('driver') || input.includes('రఫ్') || input.includes('rough') || input.includes('నిర్లక్ష్యం') || input.includes('వేగంగా') || input.includes('స్పీడ్') || input.includes('speed') || input.includes('భయం')) {
-    return {
+    }
+  },
+  {
+    id: 'driver',
+    keywords: ['డ్రైవర్', 'driver', 'రఫ్', 'rough', 'నిర్లక్ష్యం', 'వేగంగా', 'స్పీడ్', 'speed', 'భయం'],
+    phrase: "డ్రైవర్ రఫ్ డ్రైవింగ్",
+    action_tag: "escalate_to_crm",
+    originalResponse: {
       speech: "ఇది చాలా సీరియస్ విషయం అండీ... మా స్టాఫ్ అలా మాట్లాడి ఉండకూడదు. మీ ఇబ్బందికి చాలా సారీ అండీ. నేను వెంటనే మా మేనేజర్ కి ఈ విషయం ఫార్వార్డ్ చేస్తున్నాను... దీనిపై వెంటనే యాక్షన్ తీసుకుంటాం అండీ.",
       action_tag: "escalate_to_crm"
-    };
-  }
-
-  // 4. Delay / Late / Waiting
-  if (input.includes('లేట్') || input.includes('late') || input.includes('డిలే') || input.includes('delay') || input.includes('వెయిట్') || input.includes('wait') || input.includes('ఆలస్యం') || input.includes('సమయం')) {
-    return {
+    }
+  },
+  {
+    id: 'delay',
+    keywords: ['లేట్', 'late', 'డిలే', 'delay', 'వెయిట్', 'wait', 'ఆలస్యం', 'సమయం'],
+    phrase: "బస్సు లేట్ రావడం",
+    action_tag: "escalate_to_crm",
+    originalResponse: {
       speech: "అయ్యో, అవునా అండీ... బస్సు లేట్ అవ్వడం వల్ల మీకు చాలా ఇబ్బంది అయినట్లుంది, దయచేసి క్షమించండి. నేను ఈ ప్రాబ్లం ని మా ఆపరేషన్స్ టీమ్ కి రిపోర్ట్ చేస్తాను... నెక్స్ట్ టైం ఇలాంటి డిలే లేకుండా తప్పకుండా చూసుకుంటాం అండీ.",
       action_tag: "escalate_to_crm"
-    };
-  }
-
-  // 5. Dropping Point / Location / Drop
-  if (input.includes('డ్రాప్') || input.includes('drop') || input.includes('దించారు') || input.includes('దించే') || input.includes('చోట') || input.includes('పాయింట్') || input.includes('point')) {
-    return {
+    }
+  },
+  {
+    id: 'drop',
+    keywords: ['డ్రాప్', 'drop', 'దించారు', 'దించే', 'చోట', 'పాయింట్', 'point'],
+    phrase: "డ్రాపింగ్ పాయింట్ ఇబ్బంది",
+    action_tag: "escalate_to_crm",
+    originalResponse: {
       speech: "అదేంటి అలా జరిగింది... మీరు అడిగిన చోట డ్రాప్ చేయకపోవడం మా పొరపాటే అండీ. మీ డ్రాపింగ్ పాయింట్ ఇష్యూ ని నేను రికార్డ్ చేస్తున్నాను... మా టీమ్ నుంచి మీకు త్వరలోనే ఒక కాల్ వస్తుంది అండీ, సారీ ఫర్ ద ట్రబుల్.",
       action_tag: "escalate_to_crm"
-    };
-  }
-
-  // 6. Luggage / Dickey / Dicky / Damage / Water
-  if (input.includes('లగేజ్') || input.includes('luggage') || input.includes('బ్యాగ్') || input.includes('bag') || input.includes('డిక్') || input.includes('dicky') || input.includes('dickey') || input.includes('నీళ్లు') || input.includes('వాటర్') || input.includes('water') || input.includes('తడి')) {
-    return {
+    }
+  },
+  {
+    id: 'luggage',
+    keywords: ['లగేజ్', 'luggage', 'బ్యాగ్', 'bag', 'డిక్', 'dicky', 'dickey', 'నీళ్లు', 'వాటర్', 'water', 'తడి'],
+    phrase: "లగేజ్ సమస్య",
+    action_tag: "escalate_to_crm",
+    originalResponse: {
       speech: "అదేంటండీ... లగేజ్ పాడవ్వడం ఏంటి? చాలా తప్పు జరిగిందండీ, క్షమించండి. డిక్ లో వాటర్ వెళ్ళడంపై నేను ఇప్పుడే డిపో మేనేజర్తో మాట్లాడుతాను... మీ బ్యాగ్ డీటెయిల్స్ నోట్ చేసుకుంటున్నాను, మా టీమ్ నుంచి మీకు గంటలో కాల్ వస్తుందండీ.",
       action_tag: "escalate_to_crm"
-    };
-  }
-
-  // 7. Seat Issues / Reclining
-  if (input.includes('సీట్') || input.includes('seat') || input.includes('రిక్లైన్') || input.includes('recline') || input.includes('వాలలేదు') || input.includes('నిద్ర') || input.includes('sleep') || input.includes('విరిగిపోయింది')) {
-    return {
+    }
+  },
+  {
+    id: 'seat',
+    keywords: ['సీట్', 'seat', 'రిక్లైన్', 'recline', 'వాలలేదు', 'నిద్ర', 'sleep', 'విరిగిపోయింది'],
+    phrase: "సీట్ కండిషన్ సరిగ్గా లేకపోవడం",
+    action_tag: "log_maintenance_ticket",
+    originalResponse: {
       speech: "అయ్యో... రాత్రంతా నిద్ర లేకుండా జర్నీ చేయడం అంటే చాలా నరకం అండీ... రిక్లైనర్ పని చేయకపోతే బస్ హెల్పర్ ని అడగాల్సింది. ఏదేమైనా సీట్ కండిషన్ బాలేనందుకు సారీ అండీ... నేను ఈ బస్సు నెంబర్ నోట్ చేసుకుని షెడ్ లో బాగు చేయిస్తాను.",
       action_tag: "log_maintenance_ticket"
-    };
+    }
   }
+];
 
-  // 8. Busy / Work / Call Later
-  if (input.includes('బిజీ') || input.includes('busy') || input.includes('పనిలో') || input.includes('వర్క్') || input.includes('work') || input.includes('తర్వాత') || input.includes('later') || input.includes('డ్రైవింగ్')) {
-    return {
-      speech: "ఓహ్, అవునా అండీ... సారీ ఫర్ ద డిస్టర్బెన్స్ అండీ. మీ టైమ్ అస్సలు వేస్ట్ చేయను... జస్ట్ ఒకే ఒక్క మాట, జర్నీ అంతా ఓకే కదా అండీ?",
-      action_tag: "active_chat"
-    };
-  }
-
-  // 9. Initial Hello
-  if (input.includes('హలో') || input.includes('hello') || input.includes('నమస్కారం') || input.includes('namaskaram')) {
-    return {
-      speech: "నమస్కారం అండీ, నేను మాగ్ని ట్రావెల్స్ నుంచి స్వాతిని మాట్లాడుతున్నాను... నిన్న మన బస్సులో ట్రావెల్ చేశారు కదా, జర్నీ ఎలా జరిగింది అండీ? అంతా ఓకేనా?",
-      action_tag: "active_chat"
-    };
-  }
-
-  // 10. Positive feedback
-  if (input.includes('బాగుంది') || input.includes('బాగానే') || input.includes('ok') || input.includes('okay') || input.includes('ఓకే') || input.includes('సూపర్') || input.includes('super') || input.includes('గుడ్') || input.includes('good') || input.includes('హ్యాపీ') || input.includes('happy') || input.includes('నైస్') || input.includes('nice') || input.includes('కంఫర్ట్') || input.includes('comfort') || input.includes('ధన్యవాదాలు') || input.includes('థాంక్స్')) {
-    return {
-      speech: "చాలా సంతోషం అండీ... మీ జర్నీ కంఫర్టబుల్ గా జరిగినందుకు మాకు చాలా హ్యాపీ. మరి, మా ట్రావెల్స్ కి రెడ్ బస్ యాప్ లో ఒక చిన్న రేటింగ్ ఇవ్వగలరా అండీ? నేను మీకు వాట్సాప్ లో రెడ్ బస్ లింక్ పంపిస్తాను... థాంక్యూ అండీ!",
-      action_tag: "trigger_sms_review"
-    };
-  }
-
-  // Fallback default response
-  return {
-    speech: "అవునా అండీ... మీ అభిప్రాయాన్ని నేను రికార్డ్ చేసుకున్నాను. మా సర్వీస్ ని మరింత మెరుగుపరచుకోవడానికి ఇది మాకు సహాయపడుతుంది, థాంక్యూ అండీ.",
-    action_tag: "active_chat"
-  };
-}
+// All key domain keywords for verification checks
+const KEYWORDS_LIST = [
+  'ac', 'ఏసీ', 'ఉక్క', 'కూలింగ్', 'cooling', 'వేడి', 'heat',
+  'కండక్టర్', 'conductor', 'ఎక్స్ట్రా', 'extra', 'డబ్బులు', 'మనీ', 'money', 'లంచం',
+  'డ్రైవర్', 'driver', 'రఫ్', 'rough', 'నిర్లక్ష్యం', 'వేగంగా', 'స్పీడ్', 'speed', 'భయం',
+  'లేట్', 'late', 'డిలే', 'delay', 'వెయిట్', 'wait', 'ఆలస్యం', 'సమయం',
+  'డ్రాప్', 'drop', 'దించారు', 'దించే', 'చోట', 'పాయింట్', 'point',
+  'లగేజ్', 'luggage', 'బ్యాగ్', 'bag', 'డిక్', 'dicky', 'dickey', 'నీళ్లు', 'వాటర్', 'water', 'తడి',
+  'సీట్', 'seat', 'రిక్లైన్', 'recline', 'వాలలేదు', 'నిద్ర', 'sleep', 'విరిగిపోయింది',
+  'బిజీ', 'busy', 'పనిలో', 'వర్క్', 'work', 'తర్వాత', 'later', 'డ్రైవింగ్',
+  'హలో', 'hello', 'నమస్కారం', 'namaskaram',
+  'బాగుంది', 'బాగానే', 'ok', 'okay', 'ఓకే', 'సూపర్', 'super', 'గుడ్', 'good', 'హ్యాపీ', 'happy', 'నైస్', 'nice', 'కంఫర్ట్', 'comfort', 'ధన్యవాదాలు', 'థాంక్స్',
+  'బాగాలేదు', 'నచ్చలేదు', 'వేస్ట్', 'వరస్ట్', 'ప్రాబ్లం', 'problem', 'ఇబ్బంది', 'సరిగ్గా', 'చెత్త', 'ఖరాబ్', 'దారుణం', 'కష్టం'
+];
 
 // Filter out background noise, single syllables, and repetitive filler phrases
 function isNoiseUtterance(text) {
@@ -179,6 +177,101 @@ function isNoiseUtterance(text) {
   ];
 
   return words.every(w => noiseWords.includes(w));
+}
+
+// Determines if an utterance is background noise / chatter
+function isLikelyBackgroundNoise(text) {
+  if (isNoiseUtterance(text)) return true;
+
+  const clean = text.toLowerCase().trim().replace(/[.,?/#!$%^&*;:{}=\-_`~()]/g, "");
+  const words = clean.split(/\s+/).filter(w => w.length > 0);
+  if (words.length === 0) return true;
+
+  // Check if it matches any domain keyword
+  const hasKeyword = KEYWORDS_LIST.some(kw => clean.includes(kw));
+  if (hasKeyword) return false;
+
+  // If no keywords matched and the utterance is very short, ignore it
+  if (words.length <= 2 || clean.length < 10) {
+    return true;
+  }
+
+  return false;
+}
+
+// Local keyword-triggered response engine (Supports composite multi-complaint apologies)
+function getKeywordResponse(userInput) {
+  const input = userInput.toLowerCase();
+
+  // 1. Identify which negative categories are matched
+  const matchedCategories = [];
+  for (const cat of ISSUE_CATEGORIES) {
+    const matched = cat.keywords.some(kw => input.includes(kw));
+    if (matched) {
+      matchedCategories.push(cat);
+    }
+  }
+
+  // 2. If one or more negative categories match
+  if (matchedCategories.length > 0) {
+    // Determine overall action tag (Priority: escalate_to_crm > log_maintenance_ticket)
+    const hasCrm = matchedCategories.some(cat => cat.action_tag === 'escalate_to_crm');
+    const finalTag = hasCrm ? 'escalate_to_crm' : 'log_maintenance_ticket';
+
+    if (matchedCategories.length === 1) {
+      return {
+        speech: matchedCategories[0].originalResponse.speech,
+        action_tag: finalTag
+      };
+    } else {
+      // Build dynamic composite apology
+      const phrases = matchedCategories.map(cat => cat.phrase);
+      let joinedIssues = '';
+      if (phrases.length === 2) {
+        joinedIssues = `${phrases[0]} మరియు ${phrases[1]}`;
+      } else {
+        const lastPhrase = phrases.pop();
+        joinedIssues = `${phrases.join(', ')} మరియు ${lastPhrase}`;
+      }
+
+      const speech = `అయ్యో, అవునా అండీ... జర్నీలో ${joinedIssues} వల్ల మీకు చాలా ఇబ్బంది అయినట్లుంది, దయచేసి క్షమించండి. నేను ఇప్పుడే ఈ విషయాలన్నింటినీ రికార్డ్ చేసి మా కన్సర్న్డ్ టీమ్స్ కి పంపిస్తున్నాను... దీనిపై వెంటనే చర్యలు తీసుకుని సాల్వ్ చేయిస్తాం అండీ.`;
+      
+      return {
+        speech,
+        action_tag: finalTag
+      };
+    }
+  }
+
+  // 3. Busy / Work / Call Later
+  if (input.includes('బిజీ') || input.includes('busy') || input.includes('పనిలో') || input.includes('వర్క్') || input.includes('work') || input.includes('తర్వాత') || input.includes('later') || input.includes('డ్రైవింగ్')) {
+    return {
+      speech: "ఓహ్, అవునా అండీ... సారీ ఫర్ ద డిస్టర్బెన్స్ అండీ. మీ టైమ్ అస్సలు వేస్ట్ చేయను... జస్ట్ ఒకే ఒక్క మాట, జర్నీ అంతా ఓకే కదా అండీ?",
+      action_tag: "active_chat"
+    };
+  }
+
+  // 4. Initial Hello
+  if (input.includes('హలో') || input.includes('hello') || input.includes('నమస్కారం') || input.includes('namaskaram')) {
+    return {
+      speech: "నమస్కారం అండీ, నేను మాగ్ని ట్రావెల్స్ నుంచి స్వాతిని మాట్లాడుతున్నాను... నిన్న మన బస్సులో ట్రావెల్ చేశారు కదా, జర్నీ ఎలా జరిగింది అండీ? అంతా ఓకేనా?",
+      action_tag: "active_chat"
+    };
+  }
+
+  // 5. Positive feedback
+  if (input.includes('బాగుంది') || input.includes('బాగానే') || input.includes('ok') || input.includes('okay') || input.includes('ఓకే') || input.includes('సూపర్') || input.includes('super') || input.includes('గుడ్') || input.includes('good') || input.includes('హ్యాపీ') || input.includes('happy') || input.includes('నైస్') || input.includes('nice') || input.includes('కంఫర్ట్') || input.includes('comfort') || input.includes('ధన్యవాదాలు') || input.includes('థాంక్స్')) {
+    return {
+      speech: "చాలా సంతోషం అండీ... మీ జర్నీ కంఫర్టబుల్ గా జరిగినందుకు మాకు చాలా హ్యాపీ. మరి, మా ట్రావెల్స్ కి రెడ్ బస్ యాప్ లో ఒక చిన్న రేటింగ్ ఇవ్వగలరా అండీ? నేను మీకు వాట్సాప్ లో రెడ్ బస్ లింక్ పంపిస్తాను... థాంక్యూ అండీ!",
+      action_tag: "trigger_sms_review"
+    };
+  }
+
+  // Fallback default response
+  return {
+    speech: "అవునా అండీ... మీ అభిప్రాయాన్ని నేను రికార్డ్ చేసుకున్నాను. మా సర్వీస్ ని మరింత మెరుగుపరచుకోవడానికి ఇది మాకు సహాయపడుతుంది, థాంక్యూ అండీ.",
+    action_tag: "active_chat"
+  };
 }
 
 // Upgrade HTTP connection to appropriate WebSocket Server
@@ -267,7 +360,7 @@ wss.on('connection', (ws) => {
   function initSarvamStt() {
     if (!sarvamApiKey) return;
 
-    const sttUrl = 'wss://api.sarvam.ai/speech-to-text/ws?model=saaras:v3&language-code=te-IN&mode=transcribe&sample_rate=8000';
+    const sttUrl = 'wss://api.sarvam.ai/speech-to-text/ws?model=saaras:v3&language-code=te-IN&mode=transcribe&sample_rate=8000&high_vad_sensitivity=true';
     console.log(`Connecting to Sarvam STT WebSocket at: ${sttUrl}`);
 
     sarvamSttWs = new WebSocket(sttUrl, {
@@ -301,8 +394,8 @@ wss.on('connection', (ws) => {
 
             if (finalUtterance) {
               // Ignore background noise, throat clearing, or filler-only phrases
-              if (isNoiseUtterance(finalUtterance)) {
-                console.log(`[STT Ignored Filler/Noise]: "${finalUtterance}"`);
+              if (isLikelyBackgroundNoise(finalUtterance)) {
+                console.log(`[STT Ignored Background/Noise/Filler]: "${finalUtterance}"`);
                 return;
               }
 
