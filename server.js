@@ -493,6 +493,10 @@ wss.on('connection', (ws) => {
   let currentTurnTranscript = '';
   let finalActionTag = 'active_chat';
 
+  // Audio buffering and chunking state for Exotel compatibility
+  let mediaBuffer = Buffer.alloc(0);
+  let ttsFlushTimeout = null;
+
   function attemptGreeting() {
     if (streamSid && ttsConfigured && !greetingSent) {
       greetingSent = true;
@@ -610,6 +614,22 @@ wss.on('connection', (ws) => {
 
               // Stream response text to Sarvam TTS WebSocket
               if (sarvamTtsWs && sarvamTtsWs.readyState === WebSocket.OPEN) {
+                // Clear any unsent buffered audio before starting a new turn
+                mediaBuffer = Buffer.alloc(0);
+                if (ttsFlushTimeout) {
+                  clearTimeout(ttsFlushTimeout);
+                  ttsFlushTimeout = null;
+                }
+
+                // Send clear event to Exotel to stop any currently playing audio immediately
+                if (ws.readyState === WebSocket.OPEN && streamSid) {
+                  const clearFrame = {
+                    event: 'clear',
+                    stream_sid: streamSid
+                  };
+                  ws.send(JSON.stringify(clearFrame));
+                }
+
                 const ttsMessage = {
                   type: 'text',
                   data: {
@@ -682,17 +702,52 @@ wss.on('connection', (ws) => {
         // Handle TTS audio chunk
         if (msg.type === 'audio' && msg.data && msg.data.audio) {
           const audioPayload = msg.data.audio; // This is a base64 encoded audio string
-          
-          if (ws.readyState === WebSocket.OPEN && streamSid) {
-            const responseFrame = {
-              event: 'media',
-              stream_sid: streamSid,
-              media: {
-                payload: audioPayload
-              }
-            };
-            ws.send(JSON.stringify(responseFrame));
+          const chunk = Buffer.from(audioPayload, 'base64');
+          mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
+
+          // Clear any active flush timeout
+          if (ttsFlushTimeout) {
+            clearTimeout(ttsFlushTimeout);
+            ttsFlushTimeout = null;
           }
+
+          // Send audio in multiples of 320 bytes (20ms frames)
+          const CHUNK_SIZE = 320;
+          while (mediaBuffer.length >= CHUNK_SIZE) {
+            const sendChunk = mediaBuffer.slice(0, CHUNK_SIZE);
+            mediaBuffer = mediaBuffer.slice(CHUNK_SIZE);
+
+            if (ws.readyState === WebSocket.OPEN && streamSid) {
+              const responseFrame = {
+                event: 'media',
+                stream_sid: streamSid,
+                media: {
+                  payload: sendChunk.toString('base64')
+                }
+              };
+              ws.send(JSON.stringify(responseFrame));
+            }
+          }
+
+          // Schedule a timeout to flush residual bytes (padded) if no new chunks arrive for 100ms
+          ttsFlushTimeout = setTimeout(() => {
+            if (mediaBuffer.length > 0) {
+              const paddingSize = CHUNK_SIZE - mediaBuffer.length;
+              const paddedChunk = Buffer.concat([mediaBuffer, Buffer.alloc(paddingSize)]);
+              mediaBuffer = Buffer.alloc(0);
+
+              if (ws.readyState === WebSocket.OPEN && streamSid) {
+                const responseFrame = {
+                  event: 'media',
+                  stream_sid: streamSid,
+                  media: {
+                    payload: paddedChunk.toString('base64')
+                  }
+                };
+                ws.send(JSON.stringify(responseFrame));
+              }
+            }
+          }, 100);
         }
       } catch (err) {
         console.error('Error processing Sarvam TTS message:', err);
@@ -745,7 +800,7 @@ wss.on('connection', (ws) => {
                 audio: {
                   data: msg.media.payload,
                   sample_rate: 8000,
-                  encoding: 'audio/wav'
+                  encoding: 'pcm_s16le'
                 }
               };
               sarvamSttWs.send(JSON.stringify(audioMessage));
@@ -778,6 +833,13 @@ wss.on('connection', (ws) => {
     if (isSessionClosed) return;
     isSessionClosed = true;
     console.log(`Exotel WebSocket connection closed. Code: ${code}, Reason: ${reason}`);
+
+    // Clear any active flush timeouts
+    if (ttsFlushTimeout) {
+      clearTimeout(ttsFlushTimeout);
+      ttsFlushTimeout = null;
+    }
+    mediaBuffer = Buffer.alloc(0);
 
     // Gracefully close STT connection
     if (sarvamSttWs) {
