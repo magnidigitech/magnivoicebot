@@ -326,25 +326,29 @@
 
     .bubble-user {
       align-self: flex-start;
-      .bubble {
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-top-left-radius: 2px;
-      }
-      .bubble-header {
-        align-self: flex-start;
-      }
+    }
+
+    .bubble-user .bubble {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-top-left-radius: 2px;
+    }
+
+    .bubble-user .bubble-header {
+      align-self: flex-start;
     }
 
     .bubble-bot {
       align-self: flex-end;
-      .bubble {
-        background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%);
-        border-top-right-radius: 2px;
-      }
-      .bubble-header {
-        align-self: flex-end;
-      }
+    }
+
+    .bubble-bot .bubble {
+      background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%);
+      border-top-right-radius: 2px;
+    }
+
+    .bubble-bot .bubble-header {
+      align-self: flex-end;
     }
 
     /* Call details bar */
