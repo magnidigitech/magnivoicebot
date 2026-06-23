@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
       --bg-gradient: linear-gradient(135deg, #0f0c20 0%, #15102a 50%, #06020f 100%);
@@ -492,19 +493,75 @@
   </header>
 
   <main>
-    <!-- Trigger Outbound Call Panel -->
-    <div style="height: auto; min-height: unset; padding: 1.5rem; border-radius: 20px; background: var(--panel-bg); border: 1px solid var(--panel-border); backdrop-filter: blur(12px); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); margin-bottom: 0px;">
-      <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text);">
-        <svg style="width: 20px; height: 20px; fill: var(--accent);" viewBox="0 0 24 24"><path d="M6.62,10.79C8.06,13.62 10.38,15.93 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z"/></svg>
-        Trigger Outbound Feedback Call
+    <!-- Outbound Control Center -->
+    <div style="height: auto; min-height: unset; padding: 1.5rem; border-radius: 20px; background: var(--panel-bg); border: 1px solid var(--panel-border); backdrop-filter: blur(12px); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); display: flex; flex-direction: column; gap: 1.5rem;">
+      <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; color: var(--text); border-bottom: 1px solid var(--panel-border); padding-bottom: 0.75rem;">
+        <svg style="width: 24px; height: 24px; fill: var(--accent);" viewBox="0 0 24 24"><path d="M6.62,10.79C8.06,13.62 10.38,15.93 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z"/></svg>
+        Outbound Call Control Center
       </h2>
-      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-        <input type="text" id="targetPhoneNumber" placeholder="Enter Customer Number (e.g., +919876543210)" style="flex: 1; min-width: 280px; padding: 0.8rem 1.2rem; border-radius: 10px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.95rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--panel-border)'" />
-        <button id="btnTriggerCall" onclick="triggerOutboundCall()" style="padding: 0.8rem 2rem; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%); color: #fff; font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
-          Call Now
-        </button>
+      
+      <!-- Tab headers -->
+      <div style="display: flex; gap: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">
+        <button id="tabSingleBtn" onclick="switchOutboundTab('single')" style="background: none; border: none; color: var(--accent); font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 600; cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid var(--accent); transition: all 0.2s; outline: none;">Single Call</button>
+        <button id="tabQueueBtn" onclick="switchOutboundTab('queue')" style="background: none; border: none; color: var(--text-muted); font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 500; cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent; transition: all 0.2s; outline: none;">Excel Bulk Campaign Queue</button>
       </div>
-      <div id="triggerStatus" style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted); min-height: 1.25rem;"></div>
+
+      <!-- Tab 1: Single Call -->
+      <div id="tabSingleContent" style="display: block;">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <input type="text" id="targetPhoneNumber" placeholder="Enter Customer Number (e.g., +919876543210)" style="flex: 1; min-width: 280px; padding: 0.8rem 1.2rem; border-radius: 10px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.95rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--panel-border)'" />
+          <button id="btnTriggerCall" onclick="triggerOutboundCall()" style="padding: 0.8rem 2rem; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%); color: #fff; font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+            Call Now
+          </button>
+        </div>
+        <div id="triggerStatus" style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted); min-height: 1.25rem;"></div>
+      </div>
+
+      <!-- Tab 2: Excel Campaign Queue -->
+      <div id="tabQueueContent" style="display: none; flex-direction: column; gap: 1.25rem;">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 12px; border: 1px dashed var(--panel-border);">
+          <div style="flex: 1; min-width: 260px;">
+            <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 500;">Upload Excel/CSV Call List</label>
+            <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="color: var(--text-muted); font-size: 0.9rem;" />
+          </div>
+          <button id="btnUploadExcel" onclick="handleExcelUpload()" style="padding: 0.75rem 1.5rem; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.08); color: var(--text); font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+            Import List
+          </button>
+        </div>
+
+        <!-- Queue Status Summary and Controls -->
+        <div id="queueControlBar" style="display: none; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; border: 1px solid var(--panel-border); flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; gap: 1.5rem; font-size: 0.9rem; flex-wrap: wrap;">
+            <div>Status: <span id="queueActiveStatus" style="font-weight: 700; color: var(--text-muted);">Idle</span></div>
+            <div>Total: <span id="qStatTotal" style="font-weight: 600; color: var(--text);">0</span></div>
+            <div>Pending: <span id="qStatPending" style="font-weight: 600; color: var(--warning);">0</span></div>
+            <div>Dialing: <span id="qStatDialing" style="font-weight: 600; color: var(--accent);">0</span></div>
+            <div>Done: <span id="qStatCompleted" style="font-weight: 600; color: var(--success);">0</span></div>
+          </div>
+          <div style="display: flex; gap: 0.75rem;">
+            <button id="btnStartQueue" onclick="startQueue()" style="padding: 0.6rem 1.2rem; border-radius: 6px; border: none; background: var(--success); color: #fff; font-weight: 600; cursor: pointer; font-size: 0.85rem; font-family: 'Outfit', sans-serif;">Start Dialer</button>
+            <button id="btnPauseQueue" onclick="pauseQueue()" style="padding: 0.6rem 1.2rem; border-radius: 6px; border: none; background: var(--warning); color: #fff; font-weight: 600; cursor: pointer; font-size: 0.85rem; font-family: 'Outfit', sans-serif; display: none;">Pause Dialer</button>
+            <button id="btnClearQueue" onclick="clearQueue()" style="padding: 0.6rem 1.2rem; border-radius: 6px; border: 1px solid var(--error); background: rgba(239, 68, 68, 0.1); color: var(--error); font-weight: 600; cursor: pointer; font-size: 0.85rem; font-family: 'Outfit', sans-serif;">Clear Queue</button>
+          </div>
+        </div>
+
+        <!-- Call List Queue Table -->
+        <div id="queueTableContainer" style="display: none; max-height: 250px; overflow-y: auto; border: 1px solid var(--panel-border); border-radius: 10px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+            <thead>
+              <tr style="background: rgba(25, 20, 45, 0.4); border-bottom: 1px solid var(--panel-border); font-family: 'Outfit', sans-serif; color: var(--text-muted);">
+                <th style="padding: 0.75rem 1rem;">#</th>
+                <th style="padding: 0.75rem 1rem;">Phone Number</th>
+                <th style="padding: 0.75rem 1rem;">Status</th>
+                <th style="padding: 0.75rem 1rem;">Dial Time</th>
+              </tr>
+            </thead>
+            <tbody id="queueTableBody">
+              <!-- Queue rows injected dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- Stats Row -->
@@ -644,6 +701,13 @@
         completedCalls = data.history || [];
         updateStatsUI();
         renderHistory();
+        if (data.queue) {
+          renderQueue(data.queue, data.queueActive);
+        }
+      }
+
+      if (event === 'queue_state') {
+        renderQueue(data.queue, data.queueActive);
       }
 
       if (event === 'call_start') {
@@ -842,6 +906,209 @@
         btn.disabled = false;
         btn.style.opacity = '1';
       }
+    }
+
+    function switchOutboundTab(tab) {
+      const tabSingleBtn = document.getElementById('tabSingleBtn');
+      const tabQueueBtn = document.getElementById('tabQueueBtn');
+      const tabSingleContent = document.getElementById('tabSingleContent');
+      const tabQueueContent = document.getElementById('tabQueueContent');
+
+      if (tab === 'single') {
+        tabSingleBtn.style.color = 'var(--accent)';
+        tabSingleBtn.style.borderBottomColor = 'var(--accent)';
+        tabSingleBtn.style.fontWeight = '600';
+
+        tabQueueBtn.style.color = 'var(--text-muted)';
+        tabQueueBtn.style.borderBottomColor = 'transparent';
+        tabQueueBtn.style.fontWeight = '500';
+
+        tabSingleContent.style.display = 'block';
+        tabQueueContent.style.display = 'none';
+      } else {
+        tabQueueBtn.style.color = 'var(--accent)';
+        tabQueueBtn.style.borderBottomColor = 'var(--accent)';
+        tabQueueBtn.style.fontWeight = '600';
+
+        tabSingleBtn.style.color = 'var(--text-muted)';
+        tabSingleBtn.style.borderBottomColor = 'transparent';
+        tabSingleBtn.style.fontWeight = '500';
+
+        tabSingleContent.style.display = 'none';
+        tabQueueContent.style.display = 'flex';
+      }
+    }
+
+    function handleExcelUpload() {
+      const fileInput = document.getElementById('excelFileInput');
+      const file = fileInput.files[0];
+      if (!file) {
+        alert('Please choose an Excel or CSV file first.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          const numbers = [];
+          
+          let phoneColIndex = 0;
+          if (json.length > 0) {
+            const headers = json[0].map(h => String(h).toLowerCase().trim());
+            const idx = headers.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('number') || h.includes('call'));
+            if (idx !== -1) {
+              phoneColIndex = idx;
+            }
+          }
+
+          for (let i = 1; i < json.length; i++) {
+            const row = json[i];
+            if (row && row[phoneColIndex]) {
+              const cleaned = String(row[phoneColIndex]).trim();
+              if (cleaned.length >= 10) {
+                numbers.push(cleaned);
+              }
+            }
+          }
+
+          if (numbers.length === 0) {
+            alert('No valid phone numbers found in the Excel/CSV sheet. Make sure there is a column containing phone numbers (10 digits or more).');
+            return;
+          }
+
+          console.log(`Extracted phone numbers:`, numbers);
+
+          const response = await fetch('/api/upload-queue', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ numbers })
+          });
+
+          const result = await response.json();
+          if (response.ok && result.success) {
+            alert(`Successfully imported ${numbers.length} numbers to the queue!`);
+            fileInput.value = '';
+          } else {
+            alert(`Failed to upload queue: ${result.error || 'Unknown error'}`);
+          }
+        } catch (err) {
+          console.error('Error parsing file:', err);
+          alert(`Error reading file: ${err.message}`);
+        }
+      };
+      
+      reader.readAsArrayBuffer(file);
+    }
+
+    async function startQueue() {
+      try {
+        const response = await fetch('/api/queue/start', { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok) {
+          alert(`Error starting queue: ${result.error}`);
+        }
+      } catch (err) {
+        alert(`Network Error: ${err.message}`);
+      }
+    }
+
+    async function pauseQueue() {
+      try {
+        const response = await fetch('/api/queue/pause', { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok) {
+          alert(`Error pausing queue: ${result.error}`);
+        }
+      } catch (err) {
+        alert(`Network Error: ${err.message}`);
+      }
+    }
+
+    async function clearQueue() {
+      if (!confirm('Are you sure you want to clear the entire queue?')) return;
+      try {
+        const response = await fetch('/api/queue/clear', { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok) {
+          alert(`Error clearing queue: ${result.error}`);
+        }
+      } catch (err) {
+        alert(`Network Error: ${err.message}`);
+      }
+    }
+
+    function renderQueue(queue, queueActive) {
+      const qStatTotal = document.getElementById('qStatTotal');
+      const qStatPending = document.getElementById('qStatPending');
+      const qStatDialing = document.getElementById('qStatDialing');
+      const qStatCompleted = document.getElementById('qStatCompleted');
+      const queueActiveStatus = document.getElementById('queueActiveStatus');
+      const queueControlBar = document.getElementById('queueControlBar');
+      const queueTableContainer = document.getElementById('queueTableContainer');
+      const queueTableBody = document.getElementById('queueTableBody');
+      const btnStartQueue = document.getElementById('btnStartQueue');
+      const btnPauseQueue = document.getElementById('btnPauseQueue');
+
+      if (!queue || queue.length === 0) {
+        queueControlBar.style.display = 'none';
+        queueTableContainer.style.display = 'none';
+        return;
+      }
+
+      queueControlBar.style.display = 'flex';
+      queueTableContainer.style.display = 'block';
+
+      const total = queue.length;
+      const pending = queue.filter(i => i.status === 'pending').length;
+      const dialing = queue.filter(i => i.status === 'dialing').length;
+      const completed = queue.filter(i => i.status === 'completed').length;
+
+      qStatTotal.textContent = total;
+      qStatPending.textContent = pending;
+      qStatDialing.textContent = dialing;
+      qStatCompleted.textContent = completed;
+
+      if (queueActive) {
+        queueActiveStatus.textContent = 'Active (Calling)';
+        queueActiveStatus.style.color = 'var(--success)';
+        btnStartQueue.style.display = 'none';
+        btnPauseQueue.style.display = 'block';
+      } else {
+        queueActiveStatus.textContent = 'Paused';
+        queueActiveStatus.style.color = 'var(--text-muted)';
+        btnStartQueue.style.display = 'block';
+        btnPauseQueue.style.display = 'none';
+      }
+
+      queueTableBody.innerHTML = '';
+      queue.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid rgba(255, 255, 255, 0.05)';
+        
+        let statusStyle = '';
+        if (item.status === 'dialing') statusStyle = 'color: var(--accent); font-weight: 700;';
+        else if (item.status === 'completed') statusStyle = 'color: var(--success);';
+        else if (item.status === 'failed') statusStyle = 'color: var(--error);';
+        else statusStyle = 'color: var(--warning);';
+
+        const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '---';
+
+        tr.innerHTML = `
+          <td style="padding: 0.75rem 1rem; color: var(--text-muted);">${index + 1}</td>
+          <td style="padding: 0.75rem 1rem; font-weight: 500;">${item.phone}</td>
+          <td style="padding: 0.75rem 1rem; text-transform: uppercase; font-size: 0.75rem; ${statusStyle}">${item.status}</td>
+          <td style="padding: 0.75rem 1rem; color: var(--text-muted);">${timeStr}</td>
+        `;
+        queueTableBody.appendChild(tr);
+      });
     }
 
     // Initialize Connection

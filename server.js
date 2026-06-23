@@ -32,13 +32,8 @@ app.get('/health', (req, res) => {
   res.status(200).send({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Outbound Call Trigger Route
-app.post('/api/trigger-call', async (req, res) => {
-  const { phoneNumber } = req.body;
-  if (!phoneNumber) {
-    return res.status(400).json({ error: 'Phone number is required.' });
-  }
-
+// Exotel Outbound Call Helper
+async function triggerExotelOutboundCall(phoneNumber) {
   const apiKey = process.env.EXOTEL_API_KEY;
   const apiToken = process.env.EXOTEL_API_TOKEN;
   const accountSid = process.env.EXOTEL_ACCOUNT_SID;
@@ -47,47 +42,170 @@ app.post('/api/trigger-call', async (req, res) => {
   const subdomain = process.env.EXOTEL_SUBDOMAIN || 'api.exotel.com';
 
   if (!apiKey || !apiToken || !accountSid || !callerId || !flowUrl) {
-    return res.status(500).json({ 
-      error: 'Exotel API credentials are not fully configured. Please set EXOTEL_ACCOUNT_SID, EXOTEL_VIRTUAL_NUMBER, and EXOTEL_FLOW_URL in your env.' 
-    });
+    throw new Error('Exotel API credentials are not fully configured in environment variables.');
+  }
+
+  const auth = Buffer.from(`${apiKey}:${apiToken}`).toString('base64');
+  const endpoint = `https://${subdomain}/v1/Accounts/${accountSid}/Calls/connect.json`;
+  
+  const params = new URLSearchParams();
+  params.append('From', phoneNumber);
+  params.append('CallerId', callerId);
+  params.append('Url', flowUrl);
+  params.append('CallType', 'trans');
+
+  console.log(`Triggering Exotel outbound call to: ${phoneNumber} via ${endpoint}`);
+
+  const response = await axios.post(endpoint, params.toString(), {
+    headers: {
+      'Authorization': `Basic ${auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    timeout: 10000
+  });
+
+  return response.data;
+}
+
+// Queue State
+let callQueue = [];
+let queueActive = false;
+let currentQueueIndex = -1;
+
+function phoneNumbersMatch(phone1, phone2) {
+  if (!phone1 || !phone2) return false;
+  const p1 = phone1.replace(/[+\s-]/g, '').slice(-10);
+  const p2 = phone2.replace(/[+\s-]/g, '').slice(-10);
+  return p1 === p2 && p1.length === 10;
+}
+
+function broadcastQueueState() {
+  broadcastToDashboards('queue_state', {
+    queue: callQueue,
+    queueActive
+  });
+}
+
+async function dialNextInQueue() {
+  if (!queueActive) return;
+
+  // Find the first pending item
+  const nextItemIndex = callQueue.findIndex(item => item.status === 'pending');
+  if (nextItemIndex === -1) {
+    console.log('Queue dialer: No pending calls left in queue.');
+    queueActive = false;
+    broadcastQueueState();
+    return;
+  }
+
+  currentQueueIndex = nextItemIndex;
+  const item = callQueue[nextItemIndex];
+  item.status = 'dialing';
+  item.timestamp = new Date().toISOString();
+  broadcastQueueState();
+
+  try {
+    console.log(`Queue dialer: Dialing next customer: ${item.phone}`);
+    const data = await triggerExotelOutboundCall(item.phone);
+    console.log(`Queue dialer: Successfully triggered call for ${item.phone}`);
+    
+    if (data && data.Call && data.Call.Sid) {
+      item.callSid = data.Call.Sid;
+    }
+    broadcastQueueState();
+  } catch (err) {
+    console.error(`Queue dialer: Failed to dial ${item.phone}:`, err.message);
+    item.status = 'failed';
+    broadcastQueueState();
+
+    // Auto dial next in queue after 5 seconds if queue remains active
+    setTimeout(() => {
+      dialNextInQueue();
+    }, 5000);
+  }
+}
+
+// Outbound Call Trigger Route
+app.post('/api/trigger-call', async (req, res) => {
+  const { phoneNumber } = req.body;
+  if (!phoneNumber) {
+    return res.status(400).json({ error: 'Phone number is required.' });
   }
 
   try {
-    const auth = Buffer.from(`${apiKey}:${apiToken}`).toString('base64');
-    const endpoint = `https://${subdomain}/v1/Accounts/${accountSid}/Calls/connect.json`;
-    
-    const params = new URLSearchParams();
-    params.append('From', phoneNumber);
-    params.append('CallerId', callerId);
-    params.append('Url', flowUrl);
-    params.append('CallType', 'trans');
-
-    console.log(`Triggering Exotel outbound call to: ${phoneNumber} via ${endpoint}`);
-
-    const response = await axios.post(endpoint, params.toString(), {
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      timeout: 10000
-    });
-
-    console.log('Exotel outbound response:', response.data);
+    const data = await triggerExotelOutboundCall(phoneNumber);
     return res.status(200).json({ 
       success: true, 
       message: 'Call initiated successfully.', 
-      data: response.data 
+      data: data 
     });
   } catch (err) {
     console.error('Failed to trigger Exotel outbound call:', err.message);
-    if (err.response) {
-      console.error('Exotel Error Response:', JSON.stringify(err.response.data));
-      return res.status(err.response.status).json({ 
-        error: `Exotel API error: ${JSON.stringify(err.response.data)}` 
-      });
-    }
-    return res.status(500).json({ error: `Connection failed: ${err.message}` });
+    return res.status(500).json({ error: err.message });
   }
+});
+
+// Upload phone numbers to the queue
+app.post('/api/upload-queue', (req, res) => {
+  const { numbers } = req.body;
+  if (!Array.isArray(numbers)) {
+    return res.status(400).json({ error: 'Payload must contain a "numbers" array.' });
+  }
+
+  const newItems = numbers.map(num => ({
+    phone: num.trim(),
+    status: 'pending',
+    callSid: null,
+    timestamp: null
+  })).filter(item => item.phone.length > 0);
+
+  callQueue = [...callQueue, ...newItems];
+  console.log(`Uploaded ${newItems.length} numbers to the call queue. Total size: ${callQueue.length}`);
+  broadcastQueueState();
+
+  return res.status(200).json({ 
+    success: true, 
+    message: `Added ${newItems.length} numbers to the queue.`, 
+    queue: callQueue 
+  });
+});
+
+// Get current queue state
+app.get('/api/queue', (req, res) => {
+  return res.status(200).json({
+    queue: callQueue,
+    queueActive
+  });
+});
+
+// Start the queue dialing
+app.post('/api/queue/start', (req, res) => {
+  if (callQueue.length === 0) {
+    return res.status(400).json({ error: 'Queue is empty. Please upload numbers first.' });
+  }
+  queueActive = true;
+  broadcastQueueState();
+  
+  // Start dialing
+  dialNextInQueue();
+  
+  return res.status(200).json({ success: true, message: 'Queue dialing started.' });
+});
+
+// Pause the queue dialing
+app.post('/api/queue/pause', (req, res) => {
+  queueActive = false;
+  broadcastQueueState();
+  return res.status(200).json({ success: true, message: 'Queue dialing paused.' });
+});
+
+// Clear the queue
+app.post('/api/queue/clear', (req, res) => {
+  callQueue = [];
+  queueActive = false;
+  currentQueueIndex = -1;
+  broadcastQueueState();
+  return res.status(200).json({ success: true, message: 'Queue cleared.' });
 });
 
 const server = http.createServer(app);
@@ -120,7 +238,9 @@ dashboardWss.on('connection', (ws) => {
     event: 'init_state',
     data: {
       stats,
-      history: callHistory
+      history: callHistory,
+      queue: callQueue,
+      queueActive
     }
   }));
 
@@ -725,6 +845,23 @@ wss.on('connection', (ws) => {
       }
     } else {
       console.log('N8N_WEBHOOK_URL is not set. Skipping webhook posting.');
+    }
+
+    // Update queue item if it belongs to the outbound dialing queue
+    if (callerId) {
+      const activeItem = callQueue.find(item => phoneNumbersMatch(item.phone, callerId) && item.status === 'dialing');
+      if (activeItem) {
+        activeItem.status = 'completed';
+        broadcastQueueState();
+      }
+    }
+
+    // Auto-dial next item in queue after 5 seconds if queue remains active
+    if (queueActive) {
+      console.log('Queue dialer: Call ended. Dialing next customer in 5 seconds...');
+      setTimeout(() => {
+        dialNextInQueue();
+      }, 5000);
     }
   });
 });
