@@ -72,223 +72,95 @@ dashboardWss.on('connection', (ws) => {
   });
 });
 
-// LLM Response Generator using Chosen Provider (Gemini/OpenAI)
-async function getLLMResponse(conversationHistory) {
-  const apiKey = process.env.LLM_API_KEY;
-  if (!apiKey) {
-    console.error('LLM_API_KEY is not defined in environment variables.');
-    return JSON.stringify({
-      speech: 'క్షమించండి, సర్వర్ కనెక్ట్ కావడంలో ఇబ్బంది ఉంది.',
-      action_tag: 'active_chat'
-    });
+// Local keyword-triggered response engine (Instant, 0ms latency, zero API costs/rate limits)
+function getKeywordResponse(userInput) {
+  const input = userInput.toLowerCase();
+
+  // 1. AC Issues
+  if (input.includes('ac') || input.includes('ఏసీ') || input.includes('ఉక్క') || input.includes('కూలింగ్') || input.includes('cooling') || input.includes('వేడి') || input.includes('heat')) {
+    return {
+      speech: "ఓహ్, ఏసీ ప్రాబ్లం వచ్చిందా అండీ... జర్నీలో అది చాలా ఇబ్బంది కదా, సారీ అండీ. నేను ఈ కంప్లైంట్ ని మా మెయింటెనెన్స్ టీమ్ కి పంపిస్తున్నాను... నెక్స్ట్ ట్రిప్ కి ఆ బస్సు ని కంప్లీట్ గా చెక్ చేయిస్తాము అండీ.",
+      action_tag: "log_maintenance_ticket"
+    };
   }
 
-  const systemInstruction = `You are "Swathi", a polite, empathetic, and highly natural human customer service executive calling from Magni Travels to collect feedback on yesterday's bus journey.
-
-CRITICAL RULES FOR SPEECH GENERATION:
-1. Tone & Identity: You are a real person, not an AI. Always sound helpful and local to Andhra Pradesh.
-2. Vocabulary: Use conversational spoken Telugu mixed with common English loanwords (e.g., "Journey", "Travel", "Driver", "Seat", "AC", "Problem", "Rating", "Review", "WhatsApp", "Late"). Strictly avoid pure classical/textbook Telugu words.
-3. Pacing & Punctuation: Use ellipses (...) and commas (,) frequently. This forces the Text-to-Speech engine to take natural human-like breathing pauses.
-4. Respect: Always append conversational tags like "అండీ" (andi) or "కదా" (kada) to sentences to sound warm.
-5. Routing Goal: 
-   - If the user indicates a positive or neutral experience, gracefully ask them to rate the travels on the "redBus app" and tell them you are sending a link over WhatsApp. 
-   - If they register any active complaint (Delay, Driver behavior, Cleanliness, Luggage), sincerely apologize, explain that you are logging it for the operations team, and DO NOT mention or send the redBus rating link.
-
-JSON OUTPUT REQUIREMENT:
-For every single turn, you must respond ONLY with a valid JSON object containing exactly two keys: "speech" (the Telugu text to speak) and "action_tag" (the internal system state). Do not output markdown, do not output plain text outside the JSON.
-
-Available action_tags:
-- "active_chat": The conversation is ongoing and you need more information.
-- "trigger_sms_review": The conversation is ending on a positive/neutral note, and the redBus review link should be sent.
-- "escalate_to_crm": The conversation is ending due to a severe complaint (driver behavior, delays, lost luggage, rude staff).
-- "log_maintenance_ticket": The conversation is ending due to a bus infrastructure issue (AC failed, broken seats).
-
-FEW-SHOT EXAMPLES:
-
-User: "హలో"
-AI: {
-  "speech": "నమస్కారం అండీ, నేను మాగ్ని ట్రావెల్స్ నుంచి స్వాతిని మాట్లాడుతున్నాను... నిన్న మన బస్సులో ట్రావెల్ చేశారు కదా, జర్నీ ఎలా జరిగింది అండీ? అంతా ఓకేనా?",
-  "action_tag": "active_chat"
-}
-
-User: "అంతా బాగానే జరిగింది, ప్రాబ్లం ఏమీ లేదు."
-AI: {
-  "speech": "చాలా సంతోషం అండీ... మీ జర్నీ కంఫర్టబుల్ గా జరిగినందుకు మాకు చాలా హ్యాపీ. మరి, మా ట్రావెల్స్ కి రెడ్ బస్ యాప్ లో ఒక చిన్న రేటింగ్ ఇవ్వగలరా అండీ? నేను మీకు వాట్సాప్ లో రెడ్ బస్ లింక్ పంపిస్తాను... థాంక్యూ అండీ!",
-  "action_tag": "trigger_sms_review"
-}
-
-User: "పర్వాలేదు, ఓకే."
-AI: {
-  "speech": "అవునా అండీ... నెక్స్ట్ టైం మీ జర్నీ ఇంకా అద్భుతంగా ఉండేలా చూసుకుంటాము. వీలైతే మా సర్వీస్ కి రెడ్ బస్ లో ఒక చిన్న రివ్యూ ఇవ్వండి... నేను వాట్సాప్ లో లింక్ పంపిస్తాను, థాంక్యూ అండీ.",
-  "action_tag": "trigger_sms_review"
-}
-
-User: "బస్సు చాలా లేట్ గా వచ్చింది, చాలా వెయిట్ చేశాము."
-AI: {
-  "speech": "అయ్యో, అవునా అండీ... బస్సు లేట్ అవ్వడం వల్ల మీకు చాలా ఇబ్బంది అయినట్లుంది, దయచేసి క్షమించండి. నేను ఈ ప్రాబ్లం ని మా ఆపరేషన్స్ టీమ్ కి రిపోర్ట్ చేస్తాను... నెక్స్ట్ టైం ఇలాంటి డిలే లేకుండా తప్పకుండా చూసుకుంటాం అండీ.",
-  "action_tag": "escalate_to_crm"
-}
-
-User: "డ్రైవర్ రఫ్ గా మాట్లాడాడు."
-AI: {
-  "speech": "ఇది చాలా సీరియస్ విషయం అండీ... మా స్టాఫ్ అలా మాట్లాడి ఉండకూడదు. మీ ఇబ్బందికి చాలా సారీ అండీ. నేను వెంటనే మా మేనేజర్ కి ఈ విషయం ఫార్వార్డ్ చేస్తున్నాను... దీనిపై వెంటనే యాక్షన్ తీసుకుంటాం అండీ.",
-  "action_tag": "escalate_to_crm"
-}
-
-User: "ఏసీ పని చేయలేదు, ఉక్కపోసి చచ్చిపోయాం."
-AI: {
-  "speech": "ఓహ్, ఏసీ ప్రాబ్లం వచ్చిందా అండీ... జర్నీలో అది చాలా ఇబ్బంది కదా, సారీ అండీ. నేను ఈ కంప్లైంట్ ని మా మెయింటెనెన్స్ టీమ్ కి పంపిస్తున్నాను... నెక్స్ట్ ట్రిప్ కి ఆ బస్సు ని కంప్లీట్ గా చెక్ చేయిస్తాము అండీ.",
-  "action_tag": "log_maintenance_ticket"
-}
-
-User: "నన్ను వేరే దగ్గర డ్రాప్ చేశారు."
-AI: {
-  "speech": "అదేంటి అలా జరిగింది... మీరు అడిగిన చోట డ్రాప్ చేయకపోవడం మా పొరపాటే అండీ. మీ డ్రాపింగ్ పాయింట్ ఇష్యూ ని నేను రికార్డ్ చేస్తున్నాను... మా టీమ్ నుంచి మీకు త్వరలోనే ఒక కాల్ వస్తుంది అండీ, సారీ ఫర్ ద ట్రబుల్.",
-  "action_tag": "escalate_to_crm"
-}
-
-User: "డ్రైవర్ అయితే చాలా మంచివాడండీ, టైంకి తీసుకెళ్లాడు... కానీ ఏసీ అస్సలు పని చేయలేదు."
-AI: {
-  "speech": "అయ్యో... డ్రైవర్ బాగానే మేనేజ్ చేసినా, ఏసీ లేకపోవడం వల్ల మీకు చాలా ఇబ్బంది అయింది కదా అండీ... సారీ అండీ. నేను వెంటనే మా మెయింటెనెన్స్ టీమ్కి చెప్తాను, నెక్స్ట్ టైమ్ ఇలా అవ్వదు. ఈ విషయం నేను నోట్ చేసుకున్నానండీ.",
-  "action_tag": "log_maintenance_ticket"
-}
-
-User: "నేను కొంచెం అర్జెంట్ వర్క్లో ఉన్నానండి, తర్వాత చేయండి."
-AI: {
-  "speech": "ఓహ్, అవునా అండీ... సారీ ఫర్ ద డిస్టర్బెన్స్ అండీ. మీ టైమ్ అస్సలు వేస్ట్ చేయను... జస్ట్ ఒకే ఒక్క మాట, జర్నీ అంతా ఓకే కదా అండీ?",
-  "action_tag": "active_chat"
-}
-
-User: "నా లగేజ్ బ్యాగ్ మొత్తం పాడైపోయింది, డిక్ లో నీళ్లు వెళ్ళినట్టు ఉన్నాయి."
-AI: {
-  "speech": "అదేంటండీ... లగేజ్ పాడవ్వడం ఏంటి? చాలా తప్పు జరిగిందండీ, క్షమించండి. డిక్ లో వాటర్ వెళ్ళడంపై నేను ఇప్పుడే డిపో మేనేజర్తో మాట్లాడుతాను... మీ బ్యాగ్ డీటెయిల్స్ నోట్ చేసుకుంటున్నాను, మా టీమ్ నుంచి మీకు గంటలో కాల్ వస్తుందండీ.",
-  "action_tag": "escalate_to_crm"
-}
-
-User: "ఆ కండక్టర్ లగేజ్ పెట్టడానికి ఎక్స్ట్రా వంద రూపాయలు అడిగాడండి, ఇవ్వకపోతే దించేస్తా అన్నాడు."
-AI: {
-  "speech": "బాబోయ్... ఎక్స్ట్రా మనీ అడగడం ఏంటండీ? మా ట్రావెల్స్ లో అలా అస్సలు తీసుకోకూడదు. ఆ కండక్టర్ గురించి నేను ఇప్పుడే కంప్లైంట్ లాగ్ చేస్తున్నాను... దీనిపై కచ్చితంగా యాక్షన్ తీసుకుంటాం అండీ, సారీ ఫర్ దట్.",
-  "action_tag": "escalate_to_crm"
-}
-
-User: "నాకు ఇచ్చిన సీట్ అస్సలు వెనక్కి వాలట్లేదండీ, రాత్రంతా నిద్ర లేకుండా పోయింది."
-AI: {
-  "speech": "అయ్యో... రాత్రంతా నిద్ర లేకుండా జర్నీ చేయడం అంటే చాలా నరకం అండీ... రిక్లైనర్ పని చేయకపోతే బస్ హెల్పర్ ని అడగాల్సింది. ఏదేమైనా సీట్ కండిషన్ బాలేనందుకు సారీ అండీ... నేను ఈ బస్సు నెంబర్ నోట్ చేసుకుని షెడ్ లో బాగు చేయిస్తాను.",
-  "action_tag": "log_maintenance_ticket"
-}
-
-User: "చాలా బాగుందండి, ఇప్పటివరకు నేను వెళ్ళిన బస్సుల్లో ఇదే బెస్ట్!"
-AI: {
-  "speech": "అబ్బా... థాంక్యూ సో మచ్ అండీ! మీలాంటి వాళ్ళు ఇలా చెప్తుంటే మాకు చాలా హ్యాపీగా ఉంటుంది. మరి ఈ మాటని మన రెడ్ బస్ యాప్ లో కూడా ఒక చిన్న రివ్యూ లాగా పెడితే మిగతా వాళ్ళకి హెల్ప్ అవుతుంది కదా అండీ? నేను మీ వాట్సాప్ కి లింక్ పంపిస్తాను... ప్లీజ్ రేటింగ్ ఇవ్వండి అండీ!",
-  "action_tag": "trigger_sms_review"
-}
-`;
-
-  const messages = [
-    { role: 'system', content: systemInstruction },
-    ...conversationHistory
-  ];
-
-  const provider = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
-  let endpoint = process.env.LLM_ENDPOINT || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-  let model = process.env.LLM_MODEL || 'gemini-flash-latest';
-
-  if (provider === 'openai') {
-    endpoint = process.env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
-    model = process.env.LLM_MODEL || 'gpt-4o-mini';
+  // 2. Conductor / Extortion / Extra Money
+  if (input.includes('కండక్టర్') || input.includes('conductor') || input.includes('ఎక్స్ట్రా') || input.includes('extra') || input.includes('డబ్బులు') || input.includes('మనీ') || input.includes('money') || input.includes('లంచం')) {
+    return {
+      speech: "బాబోయ్... ఎక్స్ట్రా మనీ అడగడం ఏంటండీ? మా ట్రావెల్స్ లో అలా అస్సలు తీసుకోకూడదు. ఆ కండక్టర్ గురించి నేను ఇప్పుడే కంప్లైంట్ లాగ్ చేస్తున్నాను... దీనిపై కచ్చితంగా యాక్షన్ తీసుకుంటాం అండీ, సారీ ఫర్ దట్.",
+      action_tag: "escalate_to_crm"
+    };
   }
 
-  let retries = 3;
-  let delay = 500;
-
-  for (let i = 0; i < retries; i++) {
-    try {
-      const response = await axios.post(
-        endpoint,
-        {
-          model: model,
-          messages: messages,
-          temperature: 0.3,
-          max_tokens: 1024,
-          response_format: { type: 'json_object' }
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          timeout: 15000
-        }
-      );
-
-      const reply = response.data?.choices?.[0]?.message?.content;
-      if (reply) return reply.trim();
-    } catch (err) {
-      console.warn(`LLM API error (attempt ${i + 1}/${retries}):`, err.message);
-      if (i === retries - 1) {
-        // Last attempt failed, return fallback JSON
-        return JSON.stringify({
-          speech: 'క్షమించండి, సర్వర్ కనెక్ట్ కావడంలో ఇబ్బంది ఉంది.',
-          action_tag: 'active_chat'
-        });
-      }
-      // Wait with exponential backoff before retrying
-      await new Promise(resolve => setTimeout(resolve, delay));
-      delay *= 2;
-    }
-  }
-}
-
-// Post-call sentiment analyzer
-async function analyzeSentiment(transcriptArray) {
-  const apiKey = process.env.LLM_API_KEY;
-  if (!apiKey || !transcriptArray || transcriptArray.length === 0) {
-    return 'negative';
+  // 3. Driver Behavior / Rough Driving
+  if (input.includes('డ్రైవర్') || input.includes('driver') || input.includes('రఫ్') || input.includes('rough') || input.includes('నిర్లక్ష్యం') || input.includes('వేగంగా') || input.includes('స్పీడ్') || input.includes('speed') || input.includes('భయం')) {
+    return {
+      speech: "ఇది చాలా సీరియస్ విషయం అండీ... మా స్టాఫ్ అలా మాట్లాడి ఉండకూడదు. మీ ఇబ్బందికి చాలా సారీ అండీ. నేను వెంటనే మా మేనేజర్ కి ఈ విషయం ఫార్వార్డ్ చేస్తున్నాను... దీనిపై వెంటనే యాక్షన్ తీసుకుంటాం అండీ.",
+      action_tag: "escalate_to_crm"
+    };
   }
 
-  const conversationText = transcriptArray.join('\n');
-  const systemPrompt = `You are a sentiment analyzer. Analyze the user's overall satisfaction from the following call transcript. 
-Output exactly one word: either "positive" or "negative". Do not include any punctuation, formatting, or other words.`;
-
-  const provider = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
-  let endpoint = process.env.LLM_ENDPOINT || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-  let model = process.env.LLM_MODEL || 'gemini-flash-latest';
-
-  if (provider === 'openai') {
-    endpoint = process.env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
-    model = process.env.LLM_MODEL || 'gpt-4o-mini';
+  // 4. Delay / Late / Waiting
+  if (input.includes('లేట్') || input.includes('late') || input.includes('డిలే') || input.includes('delay') || input.includes('వెయిట్') || input.includes('wait') || input.includes('ఆలస్యం') || input.includes('సమయం')) {
+    return {
+      speech: "అయ్యో, అవునా అండీ... బస్సు లేట్ అవ్వడం వల్ల మీకు చాలా ఇబ్బంది అయినట్లుంది, దయచేసి క్షమించండి. నేను ఈ ప్రాబ్లం ని మా ఆపరేషన్స్ టీమ్ కి రిపోర్ట్ చేస్తాను... నెక్స్ట్ టైం ఇలాంటి డిలే లేకుండా తప్పకుండా చూసుకుంటాం అండీ.",
+      action_tag: "escalate_to_crm"
+    };
   }
 
-  try {
-    const response = await axios.post(
-      endpoint,
-      {
-        model: model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Transcript:\n${conversationText}` }
-        ],
-        temperature: 0.1,
-        max_tokens: 100
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        timeout: 10000
-      }
-    );
-
-    const result = response.data?.choices?.[0]?.message?.content?.trim().toLowerCase();
-    if (result && (result.includes('positive') || result.includes('negative'))) {
-      return result.includes('positive') ? 'positive' : 'negative';
-    }
-    return 'negative';
-  } catch (err) {
-    console.error('Sentiment analysis API error:', err.message);
-    return 'negative';
+  // 5. Dropping Point / Location / Drop
+  if (input.includes('డ్రాప్') || input.includes('drop') || input.includes('దించారు') || input.includes('దించే') || input.includes('చోట') || input.includes('పాయింట్') || input.includes('point')) {
+    return {
+      speech: "అదేంటి అలా జరిగింది... మీరు అడిగిన చోట డ్రాప్ చేయకపోవడం మా పొరపాటే అండీ. మీ డ్రాపింగ్ పాయింట్ ఇష్యూ ని నేను రికార్డ్ చేస్తున్నాను... మా టీమ్ నుంచి మీకు త్వరలోనే ఒక కాల్ వస్తుంది అండీ, సారీ ఫర్ ద ట్రబుల్.",
+      action_tag: "escalate_to_crm"
+    };
   }
+
+  // 6. Luggage / Dickey / Dicky / Damage / Water
+  if (input.includes('లగేజ్') || input.includes('luggage') || input.includes('బ్యాగ్') || input.includes('bag') || input.includes('డిక్') || input.includes('dicky') || input.includes('dickey') || input.includes('నీళ్లు') || input.includes('వాటర్') || input.includes('water') || input.includes('తడి')) {
+    return {
+      speech: "అదేంటండీ... లగేజ్ పాడవ్వడం ఏంటి? చాలా తప్పు జరిగిందండీ, క్షమించండి. డిక్ లో వాటర్ వెళ్ళడంపై నేను ఇప్పుడే డిపో మేనేజర్తో మాట్లాడుతాను... మీ బ్యాగ్ డీటెయిల్స్ నోట్ చేసుకుంటున్నాను, మా టీమ్ నుంచి మీకు గంటలో కాల్ వస్తుందండీ.",
+      action_tag: "escalate_to_crm"
+    };
+  }
+
+  // 7. Seat Issues / Reclining
+  if (input.includes('సీట్') || input.includes('seat') || input.includes('రిక్లైన్') || input.includes('recline') || input.includes('వాలలేదు') || input.includes('నిద్ర') || input.includes('sleep') || input.includes('విరిగిపోయింది')) {
+    return {
+      speech: "అయ్యో... రాత్రంతా నిద్ర లేకుండా జర్నీ చేయడం అంటే చాలా నరకం అండీ... రిక్లైనర్ పని చేయకపోతే బస్ హెల్పర్ ని అడగాల్సింది. ఏదేమైనా సీట్ కండిషన్ బాలేనందుకు సారీ అండీ... నేను ఈ బస్సు నెంబర్ నోట్ చేసుకుని షెడ్ లో బాగు చేయిస్తాను.",
+      action_tag: "log_maintenance_ticket"
+    };
+  }
+
+  // 8. Busy / Work / Call Later
+  if (input.includes('బిజీ') || input.includes('busy') || input.includes('పనిలో') || input.includes('వర్క్') || input.includes('work') || input.includes('తర్వాత') || input.includes('later') || input.includes('డ్రైవింగ్')) {
+    return {
+      speech: "ఓహ్, అవునా అండీ... సారీ ఫర్ ద డిస్టర్బెన్స్ అండీ. మీ టైమ్ అస్సలు వేస్ట్ చేయను... జస్ట్ ఒకే ఒక్క మాట, జర్నీ అంతా ఓకే కదా అండీ?",
+      action_tag: "active_chat"
+    };
+  }
+
+  // 9. Initial Hello
+  if (input.includes('హలో') || input.includes('hello') || input.includes('నమస్కారం') || input.includes('namaskaram')) {
+    return {
+      speech: "నమస్కారం అండీ, నేను మాగ్ని ట్రావెల్స్ నుంచి స్వాతిని మాట్లాడుతున్నాను... నిన్న మన బస్సులో ట్రావెల్ చేశారు కదా, జర్నీ ఎలా జరిగింది అండీ? అంతా ఓకేనా?",
+      action_tag: "active_chat"
+    };
+  }
+
+  // 10. Positive feedback
+  if (input.includes('బాగుంది') || input.includes('బాగానే') || input.includes('ok') || input.includes('okay') || input.includes('ఓకే') || input.includes('సూపర్') || input.includes('super') || input.includes('గుడ్') || input.includes('good') || input.includes('హ్యాపీ') || input.includes('happy') || input.includes('నైస్') || input.includes('nice') || input.includes('కంఫర్ట్') || input.includes('comfort') || input.includes('ధన్యవాదాలు') || input.includes('థాంక్స్')) {
+    return {
+      speech: "చాలా సంతోషం అండీ... మీ జర్నీ కంఫర్టబుల్ గా జరిగినందుకు మాకు చాలా హ్యాపీ. మరి, మా ట్రావెల్స్ కి రెడ్ బస్ యాప్ లో ఒక చిన్న రేటింగ్ ఇవ్వగలరా అండీ? నేను మీకు వాట్సాప్ లో రెడ్ బస్ లింక్ పంపిస్తాను... థాంక్యూ అండీ!",
+      action_tag: "trigger_sms_review"
+    };
+  }
+
+  // Fallback default response
+  return {
+    speech: "అవునా అండీ... మీ అభిప్రాయాన్ని నేను రికార్డ్ చేసుకున్నాను. మా సర్వీస్ ని మరింత మెరుగుపరచుకోవడానికి ఇది మాకు సహాయపడుతుంది, థాంక్యూ అండీ.",
+    action_tag: "active_chat"
+  };
 }
 
 // Upgrade HTTP connection to appropriate WebSocket Server
@@ -331,7 +203,7 @@ wss.on('connection', (ws) => {
   const conversationHistory = [];
   let silenceTimer = null;
   let currentTurnTranscript = '';
-  let lastActionTag = 'active_chat';
+  let finalActionTag = 'active_chat';
 
   function attemptGreeting() {
     if (streamSid && ttsConfigured && !greetingSent) {
@@ -345,13 +217,7 @@ wss.on('connection', (ws) => {
     const greetingText = "నమస్కారం అండీ, నేను మాగ్ని ట్రావెల్స్ నుంచి స్వాతిని మాట్లాడుతున్నాను... నిన్న మన బస్సులో ట్రావెల్ చేశారు కదా, జర్నీ ఎలా జరిగింది అండీ? అంతా ఓకేనా?";
     console.log(`[Swathi Greeting]: ${greetingText}`);
     aiResponseLogs.push(greetingText);
-    
-    // Construct greeting JSON in the same format LLM outputs
-    const greetingJson = JSON.stringify({
-      speech: greetingText,
-      action_tag: "active_chat"
-    });
-    conversationHistory.push({ role: 'assistant', content: greetingJson });
+    conversationHistory.push({ role: 'assistant', content: greetingText });
 
     // Broadcast greeting to dashboard
     broadcastToDashboards('response', {
@@ -411,7 +277,7 @@ wss.on('connection', (ws) => {
             clearTimeout(silenceTimer);
           }
 
-          silenceTimer = setTimeout(async () => {
+          silenceTimer = setTimeout(() => {
             const finalUtterance = currentTurnTranscript.trim();
             currentTurnTranscript = ''; // Reset for next turn
 
@@ -425,73 +291,32 @@ wss.on('connection', (ws) => {
                 text: finalUtterance
               });
 
-              // Add to LLM history
-              conversationHistory.push({ role: 'user', content: finalUtterance });
-
-              // Get response from LLM Intelligence Layer
-              const rawLLMResponse = await getLLMResponse(conversationHistory);
-              console.log(`[LLM Raw Response]: ${rawLLMResponse}`);
+              // Get response locally using keyword trigger system
+              const responseData = getKeywordResponse(finalUtterance);
+              const aiResponse = responseData.speech;
+              finalActionTag = responseData.action_tag;
               
-              // Append raw response to conversation history (maintains prompt examples)
-              conversationHistory.push({ role: 'assistant', content: rawLLMResponse });
-
-              // Parse JSON speech and action_tag
-              let speechText = 'క్షమించండి, సర్వర్ కనెక్ట్ కావడంలో ఇబ్బంది ఉంది.';
-              let actionTag = 'active_chat';
-
-              try {
-                const parsed = JSON.parse(rawLLMResponse);
-                if (parsed.speech) speechText = parsed.speech;
-                if (parsed.action_tag) actionTag = parsed.action_tag;
-              } catch (e) {
-                // If it fails to parse (e.g. markdown wraps or weird raw text), try regex extraction
-                const match = rawLLMResponse.match(/\{[\s\S]*?\}/);
-                if (match) {
-                  try {
-                    const parsed = JSON.parse(match[0]);
-                    if (parsed.speech) speechText = parsed.speech;
-                    if (parsed.action_tag) actionTag = parsed.action_tag;
-                  } catch (innerErr) {
-                    speechText = rawLLMResponse;
-                  }
-                } else {
-                  speechText = rawLLMResponse;
-                }
-              }
-
-              lastActionTag = actionTag;
-              console.log(`[Swathi Speech]: ${speechText} (Action Tag: ${actionTag})`);
-              aiResponseLogs.push(speechText);
+              console.log(`[Keyword Response]: ${aiResponse} (action_tag: ${finalActionTag})`);
+              aiResponseLogs.push(aiResponse);
 
               // Broadcast bot response to dashboard
               broadcastToDashboards('response', {
                 streamSid,
-                text: speechText
+                text: aiResponse
               });
 
-              // Stream LLM response text to Sarvam TTS WebSocket
+              // Stream response text to Sarvam TTS WebSocket
               if (sarvamTtsWs && sarvamTtsWs.readyState === WebSocket.OPEN) {
                 const ttsMessage = {
                   type: 'text',
                   data: {
-                    text: speechText
+                    text: aiResponse
                   }
                 };
                 sarvamTtsWs.send(JSON.stringify(ttsMessage));
                 sarvamTtsWs.send(JSON.stringify({ type: 'flush' }));
               } else {
                 console.warn('Cannot synthesize TTS: Sarvam TTS WebSocket is not open.');
-              }
-
-              // Handle termination actions (Graceful hang up after playing the audio)
-              if (actionTag !== 'active_chat') {
-                console.log(`Terminating tag detected: ${actionTag}. Scheduling call hang-up in 7 seconds...`);
-                setTimeout(() => {
-                  if (ws.readyState === WebSocket.OPEN) {
-                    console.log(`Closing Exotel call WebSocket gracefully.`);
-                    ws.close();
-                  }
-                }, 7000);
               }
             }
           }, 800);
@@ -669,14 +494,9 @@ wss.on('connection', (ws) => {
       }
     }
 
-    // Run sentiment analysis and compile results
-    let sentiment = 'negative';
-    try {
-      console.log('Analyzing call sentiment...');
-      sentiment = await analyzeSentiment(transcriptLogs);
-    } catch (e) {
-      console.error('Error analyzing sentiment:', e.message);
-    }
+    // Run sentiment analysis locally based on finalActionTag
+    const sentiment = finalActionTag === 'trigger_sms_review' ? 'positive' : 'negative';
+    console.log(`Call sentiment determined locally: ${sentiment} (finalActionTag: ${finalActionTag})`);
 
     // Update history tracking
     stats.active = 0;
@@ -711,7 +531,7 @@ wss.on('connection', (ws) => {
           transcript: transcriptLogs.join(' '),
           ai_responses: aiResponseLogs.join(' '),
           sentiment: sentiment,
-          action_tag: lastActionTag,
+          action_tag: finalActionTag,
           status: 'completed'
         };
         console.log(`Forwarding call summary to N8N webhook...`);
