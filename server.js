@@ -191,43 +191,51 @@ AI: {
 
   const provider = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
   let endpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-  let model = 'gemini-2.5-flash';
+  let model = process.env.LLM_MODEL || 'gemini-flash-latest';
 
   if (provider === 'openai') {
     endpoint = 'https://api.openai.com/v1/chat/completions';
-    model = 'gpt-4o-mini';
+    model = process.env.LLM_MODEL || 'gpt-4o-mini';
   }
 
-  try {
-    const response = await axios.post(
-      endpoint,
-      {
-        model: model,
-        messages: messages,
-        temperature: 0.3,
-        max_tokens: 250,
-        response_format: { type: 'json_object' }
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        timeout: 5000
-      }
-    );
+  let retries = 3;
+  let delay = 500;
 
-    const reply = response.data?.choices?.[0]?.message?.content;
-    return reply ? reply.trim() : JSON.stringify({
-      speech: 'క్షమించండి, సర్వర్ కనెక్ట్ కావడంలో ఇబ్బంది ఉంది.',
-      action_tag: 'active_chat'
-    });
-  } catch (err) {
-    console.error('LLM API error:', err.message);
-    return JSON.stringify({
-      speech: 'క్షమించండి, సర్వర్ కనెక్ట్ కావడంలో ఇబ్బంది ఉంది.',
-      action_tag: 'active_chat'
-    });
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await axios.post(
+        endpoint,
+        {
+          model: model,
+          messages: messages,
+          temperature: 0.3,
+          max_tokens: 1024,
+          response_format: { type: 'json_object' }
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          timeout: 15000
+        }
+      );
+
+      const reply = response.data?.choices?.[0]?.message?.content;
+      if (reply) return reply.trim();
+    } catch (err) {
+      console.warn(`LLM API error (attempt ${i + 1}/${retries}):`, err.message);
+      if (i === retries - 1) {
+        // Last attempt failed, return fallback JSON
+        return JSON.stringify({
+          speech: 'క్షమించండి, సర్వర్ కనెక్ట్ కావడంలో ఇబ్బంది ఉంది.',
+          action_tag: 'active_chat'
+        });
+      }
+      // Wait with exponential backoff before retrying
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= 2;
+    }
   }
 }
 
@@ -244,11 +252,11 @@ Output exactly one word: either "positive" or "negative". Do not include any pun
 
   const provider = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
   let endpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-  let model = 'gemini-2.5-flash';
+  let model = process.env.LLM_MODEL || 'gemini-flash-latest';
 
   if (provider === 'openai') {
     endpoint = 'https://api.openai.com/v1/chat/completions';
-    model = 'gpt-4o-mini';
+    model = process.env.LLM_MODEL || 'gpt-4o-mini';
   }
 
   try {
@@ -261,14 +269,14 @@ Output exactly one word: either "positive" or "negative". Do not include any pun
           { role: 'user', content: `Transcript:\n${conversationText}` }
         ],
         temperature: 0.1,
-        max_tokens: 10
+        max_tokens: 100
       },
       {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`
         },
-        timeout: 5000
+        timeout: 10000
       }
     );
 

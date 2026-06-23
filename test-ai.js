@@ -123,52 +123,74 @@ AI: {
     ...conversationHistory
   ];
 
+  const provider = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
   let endpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-  let model = 'gemini-2.5-flash';
+  let model = process.env.LLM_MODEL || 'gemini-flash-latest';
 
   if (provider === 'openai') {
     endpoint = 'https://api.openai.com/v1/chat/completions';
-    model = 'gpt-4o-mini';
+    model = process.env.LLM_MODEL || 'gpt-4o-mini';
   }
 
-  try {
-    const response = await axios.post(
-      endpoint,
-      {
-        model: model,
-        messages: messages,
-        temperature: 0.3,
-        max_tokens: 250,
-        response_format: { type: 'json_object' }
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        timeout: 10000
-      }
-    );
+  let retries = 3;
+  let delay = 500;
 
-    return response.data?.choices?.[0]?.message?.content?.trim() || '';
-  } catch (err) {
-    console.error('LLM API error:', err.response ? err.response.data : err.message);
-    return 'Error connecting to LLM';
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await axios.post(
+        endpoint,
+        {
+          model: model,
+          messages: messages,
+          temperature: 0.3,
+          max_tokens: 1024,
+          response_format: { type: 'json_object' }
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          timeout: 15000
+        }
+      );
+
+      const reply = response.data?.choices?.[0]?.message?.content;
+      if (reply) return reply.trim();
+    } catch (err) {
+      console.warn(`LLM API error (attempt ${i + 1}/${retries}):`, err.message);
+      if (i === retries - 1) {
+        // Last attempt failed, return fallback JSON
+        return JSON.stringify({
+          speech: 'క్షమించండి, సర్వర్ కనెక్ట్ కావడంలో ఇబ్బంది ఉంది.',
+          action_tag: 'active_chat'
+        });
+      }
+      // Wait with exponential backoff before retrying
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= 2;
+    }
   }
 }
 
 // Sentiment Analyzer
 async function analyzeSentiment(transcriptArray) {
+  const apiKey = process.env.LLM_API_KEY;
+  if (!apiKey || !transcriptArray || transcriptArray.length === 0) {
+    return 'negative';
+  }
+
   const conversationText = transcriptArray.join('\n');
   const systemPrompt = `You are a sentiment analyzer. Analyze the user's overall satisfaction from the following call transcript. 
 Output exactly one word: either "positive" or "negative". Do not include any punctuation, formatting, or other words.`;
 
+  const provider = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
   let endpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-  let model = 'gemini-2.5-flash';
+  let model = process.env.LLM_MODEL || 'gemini-flash-latest';
 
   if (provider === 'openai') {
     endpoint = 'https://api.openai.com/v1/chat/completions';
-    model = 'gpt-4o-mini';
+    model = process.env.LLM_MODEL || 'gpt-4o-mini';
   }
 
   try {
@@ -181,7 +203,7 @@ Output exactly one word: either "positive" or "negative". Do not include any pun
           { role: 'user', content: `Transcript:\n${conversationText}` }
         ],
         temperature: 0.1,
-        max_tokens: 10
+        max_tokens: 100
       },
       {
         headers: {
@@ -192,17 +214,21 @@ Output exactly one word: either "positive" or "negative". Do not include any pun
       }
     );
 
-    return response.data?.choices?.[0]?.message?.content?.trim().toLowerCase() || 'negative';
+    const result = response.data?.choices?.[0]?.message?.content?.trim().toLowerCase();
+    if (result && (result.includes('positive') || result.includes('negative'))) {
+      return result.includes('positive') ? 'positive' : 'negative';
+    }
+    return 'negative';
   } catch (err) {
-    console.error('Sentiment analysis API error:', err.response ? err.response.data : err.message);
-    return 'error';
+    console.error('Sentiment analysis API error:', err.message);
+    return 'negative';
   }
 }
 
 async function runTests() {
   console.log('\n--- Test 1: Two Problems (AC and Driver Behavior) ---');
   const history = [
-    { role: 'assistant', content: "నమస్కారం, నేను ట్రావెల్ ఏజెన్సీ నుండి స్వాతిని మాట్లాడుతున్నాను. మీ రైడ్ ఎలా సాగింది?" },
+    { role: 'assistant', content: JSON.stringify({ speech: "నమస్కారం అండీ, నేను మాగ్ని ట్రావెల్స్ నుంచి స్వాతిని మాట్లాడుతున్నాను... నిన్న మన బస్సులో ట్రావెల్ చేశారు కదా, జర్నీ ఎలా జరిగింది అండీ? అంతా ఓకేనా?", action_tag: "active_chat" }) },
     { role: 'user', content: "పర్లేదు కానీ ఏసీ పని చేయట్లేదు, పైగా డ్రైవర్ చాలా వేగంగా నిర్లక్ష్యంగా నడిపాడు." }
   ];
   console.log('Sending history:', JSON.stringify(history, null, 2));
