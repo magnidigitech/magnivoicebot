@@ -190,11 +190,11 @@ AI: {
   ];
 
   const provider = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
-  let endpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+  let endpoint = process.env.LLM_ENDPOINT || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
   let model = process.env.LLM_MODEL || 'gemini-flash-latest';
 
   if (provider === 'openai') {
-    endpoint = 'https://api.openai.com/v1/chat/completions';
+    endpoint = process.env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
     model = process.env.LLM_MODEL || 'gpt-4o-mini';
   }
 
@@ -251,11 +251,11 @@ async function analyzeSentiment(transcriptArray) {
 Output exactly one word: either "positive" or "negative". Do not include any punctuation, formatting, or other words.`;
 
   const provider = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
-  let endpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+  let endpoint = process.env.LLM_ENDPOINT || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
   let model = process.env.LLM_MODEL || 'gemini-flash-latest';
 
   if (provider === 'openai') {
-    endpoint = 'https://api.openai.com/v1/chat/completions';
+    endpoint = process.env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
     model = process.env.LLM_MODEL || 'gpt-4o-mini';
   }
 
