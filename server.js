@@ -254,89 +254,83 @@ dashboardWss.on('connection', (ws) => {
 const ISSUE_CATEGORIES = [
   {
     id: 'ac',
-    keywords: ['ac', 'ఏసీ', 'ఉక్క', 'కూలింగ్', 'cooling', 'వేడి', 'heat'],
+    keywords: ['ac', 'ఏసీ', 'ఉక్క', 'కూలింగ్', 'cooling', 'వేడి', 'heat', 'warm', 'sweat'],
     phrase: "ఏసీ పని చేయకపోవడం",
+    phrase_en: "AC not working",
     action_tag: "log_maintenance_ticket",
-    originalResponse: {
-      speech: "అవునా అండీ, ఏసీ పని చేయలేదా... చాలా సారీ అండీ. నేను ఈ విషయాన్ని మా మెయింటెనెన్స్ టీమ్ కి చెప్తాను, నెక్స్ట్ టైం ఇలా కాకుండా చూసుకుంటాం అండీ.",
-      action_tag: "log_maintenance_ticket"
-    }
+    speech_te: "అవునా అండీ, ఏసీ పని చేయలేదా... చాలా సారీ అండీ. నేను ఈ విషయాన్ని మా మెయింటెనెన్స్ టీమ్ కి చెప్తాను, నెక్స్ట్ టైం ప్రముఖ్ ట్రావెల్స్ లో ఇలా కాకుండా చూసుకుంటాం అండీ.",
+    speech_en: "Oh, I see. The AC wasn't working? I am very sorry about that. I will report this to our maintenance team to get it fixed."
   },
   {
     id: 'conductor',
-    keywords: ['కండక్టర్', 'conductor', 'ఎక్స్ట్రా', 'extra', 'డబ్బులు', 'మనీ', 'money', 'లంచం'],
+    keywords: ['కండక్టర్', 'conductor', 'ఎక్స్ట్రా', 'extra', 'డబ్బులు', 'మనీ', 'money', 'లంచం', 'bribe', 'rude', 'behaved'],
     phrase: "కండక్టర్ ప్రవర్తన",
+    phrase_en: "conductor behavior",
     action_tag: "escalate_to_crm",
-    originalResponse: {
-      speech: "అయ్యో, కండక్టర్ ఎక్స్ట్రా డబ్బులు అడిగారా అండీ... చాలా సారీ అండీ, మా దగ్గర అలా అడగకూడదు. నేను ఇప్పుడే దీనిపై కంప్లైంట్ నోట్ చేసుకుంటున్నాను, కచ్చితంగా యాక్షన్ తీసుకుంటాం అండీ.",
-      action_tag: "escalate_to_crm"
-    }
+    speech_te: "అయ్యో, కండక్టర్ ఎక్స్ట్రా డబ్బులు అడిగారా అండీ... చాలా సారీ అండీ, మా దగ్గర అలా అడగకూడదు. నేను ఇప్పుడే దీనిపై కంప్లైంట్ నోట్ చేసుకుంటున్నాను, కచ్చితంగా ప్రముఖ్ ట్రావెల్స్ లో యాక్షన్ తీసుకుంటాం అండీ.",
+    speech_en: "Oh, did the conductor ask for extra money? I am very sorry. We do not allow this. I have registered a complaint and we will take strict action."
   },
   {
     id: 'driver',
-    keywords: ['డ్రైవర్', 'driver', 'రఫ్', 'rough', 'నిర్లక్ష్యం', 'వేగంగా', 'స్పీడ్', 'speed', 'భయం'],
+    keywords: ['డ్రైవర్', 'driver', 'రఫ్', 'rough', 'నిర్లక్ష్యం', 'వేగంగా', 'స్పీడ్', 'speed', 'భయం', 'fast', 'unsafe', 'rash'],
     phrase: "డ్రైవర్ రఫ్ డ్రైవింగ్",
+    phrase_en: "driver rough driving",
     action_tag: "escalate_to_crm",
-    originalResponse: {
-      speech: "అవునా అండీ, డ్రైవర్ రఫ్ గా డ్రైవ్ చేశారా... చాలా సారీ అండీ. నేను వెంటనే దీనిపై మా మేనేజర్ కి ఇన్ఫర్మ్ చేస్తాను, కచ్చితంగా యాక్షన్ తీసుకుంటాం అండీ.",
-      action_tag: "escalate_to_crm"
-    }
+    speech_te: "అవునా అండీ, డ్రైవర్ రఫ్ గా డ్రైవ్ చేశారా... చాలా సారీ అండీ. నేను వెంటనే దీనిపై మా మేనేజర్ కి ఇన్ఫర్మ్ చేస్తాను, కచ్చితంగా యాక్షన్ తీసుకుంటాం అండీ.",
+    speech_en: "Oh, I see. Was the driver driving rough? I apologize for the unsafe journey. I will escalate this to our operations manager immediately."
   },
   {
     id: 'delay',
-    keywords: ['లేట్', 'late', 'డిలే', 'delay', 'వెయిట్', 'wait', 'ఆలస్యం', 'సమయం'],
+    keywords: ['లేట్', 'late', 'డిలే', 'delay', 'వెయిట్', 'wait', 'ఆలస్యం', 'సమయం', 'delayed', 'behind'],
     phrase: "బస్సు లేట్ రావడం",
+    phrase_en: "bus delay",
     action_tag: "escalate_to_crm",
-    originalResponse: {
-      speech: "అయ్యో, బస్సు లేట్ అయిందా అండీ... చాలా సారీ అండీ, మీకు ఆలస్యం అయినందుకు. నేను ఈ విషయాన్ని మా ఆపరేషన్స్ టీమ్ కి రిపోర్ట్ చేస్తాను, నెక్స్ట్ టైం టైం కి ఉండేలా చూసుకుంటాం అండీ.",
-      action_tag: "escalate_to_crm"
-    }
+    speech_te: "అయ్యో, బస్సు లేట్ అయిందా అండీ... చాలా సారీ అండీ, మీకు ఆలస్యం అయినందుకు. నేను ఈ విషయాన్ని మా ఆపరేషన్స్ టీమ్ కి రిపోర్ట్ చేస్తాను, నెక్స్ట్ టైం ప్రముఖ్ ట్రావెల్స్ లో టైం కి ఉండేలా చూసుకుంటాం అండీ.",
+    speech_en: "Oh, was the bus delayed? I am extremely sorry for the delay and any inconvenience. I will report this to our operations team to ensure timely service."
   },
   {
     id: 'drop',
-    keywords: ['డ్రాప్', 'drop', 'దించారు', 'దించే', 'చోట', 'పాయింట్', 'point'],
+    keywords: ['డ్రాప్', 'drop', 'దించారు', 'దించే', 'చోట', 'పాయింట్', 'point', 'wrong place', 'wrong drop'],
     phrase: "కరెక్ట్ డ్రాపింగ్ పాయింట్ లో దించకపోవడం",
+    phrase_en: "wrong drop-off location",
     action_tag: "escalate_to_crm",
-    originalResponse: {
-      speech: "అవునా అండీ, కరెక్ట్ పాయింట్ లో దించలేదా... చాలా సారీ అండీ. నేను ఈ డ్రాపింగ్ పాయింట్ ఇష్యూ ని నోట్ చేసుకుంటున్నాను, దీనిపై మా టీమ్ చెక్ చేస్తుంది అండీ.",
-      action_tag: "escalate_to_crm"
-    }
+    speech_te: "అవునా అండీ, కరెక్ట్ పాయింట్ లో దించలేదా... చాలా సారీ అండీ. నేను ఈ ప్రముఖ్ ట్రావెల్స్ డ్రాపింగ్ పాయింట్ ఇష్యూ ని నోట్ చేసుకుంటున్నాను, దీనిపై మా టీమ్ చెక్ చేస్తుంది అండీ.",
+    speech_en: "Oh, did they drop you at the wrong location? I apologize. I am noting down this feedback to make sure it doesn't happen again."
   },
   {
     id: 'luggage',
-    keywords: ['లగేజ్', 'luggage', 'బ్యాగ్', 'bag', 'డిక్', 'dicky', 'dickey', 'నీళ్లు', 'వాటర్', 'water', 'తడి'],
+    keywords: ['లగేజ్', 'luggage', 'బ్యాగ్', 'bag', 'డిక్', 'dicky', 'dickey', 'నీళ్లు', 'వాటర్', 'water', 'తడి', 'wet', 'damaged', 'lost'],
     phrase: "లగేజ్ సమస్య",
+    phrase_en: "luggage issues",
     action_tag: "escalate_to_crm",
-    originalResponse: {
-      speech: "అయ్యో, లగేజ్ సమస్య వచ్చిందా అండీ... చాలా సారీ అండీ. నేను వెంటనే డిపో మేనేజర్ తో మాట్లాడి చెక్ చేయిస్తాను, మా టీమ్ నుంచి మీకు కాల్ వస్తుంది అండీ.",
-      action_tag: "escalate_to_crm"
-    }
+    speech_te: "అయ్యో, లగేజ్ సమస్య వచ్చిందా అండీ... చాలా సారీ అండీ. నేను వెంటనే డిపో మేనేజర్ తో మాట్లాడి చెక్ చేయిస్తాను, మా ప్రముఖ్ ట్రావెల్స్ టీమ్ నుంచి మీకు కాల్ వస్తుంది అండీ.",
+    speech_en: "Oh, did you face a luggage issue? I am very sorry. I will contact the depot manager and have someone from our team call you back."
   },
   {
     id: 'seat',
-    keywords: ['సీట్', 'seat', 'రిక్లైన్', 'recline', 'వాలలేదు', 'నిద్ర', 'sleep', 'విరిగిపోయింది'],
+    keywords: ['సీట్', 'seat', 'రిక్లైన్', 'recline', 'వాలలేదు', 'నిద్ర', 'sleep', 'విరిగిపోయింది', 'broken', 'dirty', 'uncomfortable'],
     phrase: "సీట్ సరిగ్గా లేకపోవడం",
+    phrase_en: "seat condition",
     action_tag: "log_maintenance_ticket",
-    originalResponse: {
-      speech: "అయ్యో, సీట్ కండిషన్ బాలేదా అండీ... చాలా సారీ అండీ. నేను ఈ బస్సు నెంబర్ నోట్ చేసుకుంటున్నాను, వెంటనే షెడ్ లో చెక్ చేయిస్తాం అండీ.",
-      action_tag: "log_maintenance_ticket"
-    }
+    speech_te: "అయ్యో, సీట్ కండిషన్ బాలేదా అండీ... చాలా సారీ అండీ. నేను ఈ ప్రముఖ్ ట్రావెల్స్ బస్సు నెంబర్ నోట్ చేసుకుంటున్నాను, వెంటనే షెడ్ లో చెక్ చేయిస్తాం అండీ.",
+    speech_en: "Oh, was the seat not in good condition? I apologize. I will note down this bus number and get the seat checked in our maintenance yard."
   }
 ];
 
 // All key domain keywords for verification checks
 const KEYWORDS_LIST = [
-  'ac', 'ఏసీ', 'ఉక్క', 'కూలింగ్', 'cooling', 'వేడి', 'heat',
-  'కండక్టర్', 'conductor', 'ఎక్స్ట్రా', 'extra', 'డబ్బులు', 'మనీ', 'money', 'లంచం',
-  'డ్రైవర్', 'driver', 'రఫ్', 'rough', 'నిర్లక్ష్యం', 'వేగంగా', 'స్పీడ్', 'speed', 'భయం',
-  'లేట్', 'late', 'డిలే', 'delay', 'వెయిట్', 'wait', 'ఆలస్యం', 'సమయం',
-  'డ్రాప్', 'drop', 'దించారు', 'దించే', 'చోట', 'పాయింట్', 'point',
-  'లగేజ్', 'luggage', 'బ్యాగ్', 'bag', 'డిక్', 'dicky', 'dickey', 'నీళ్లు', 'వాటర్', 'water', 'తడి',
-  'సీట్', 'seat', 'రిక్లైన్', 'recline', 'వాలలేదు', 'నిద్ర', 'sleep', 'విరిగిపోయింది',
-  'బిజీ', 'busy', 'పనిలో', 'వర్క్', 'work', 'తర్వాత', 'later', 'డ్రైవింగ్',
-  'హలో', 'hello', 'నమస్కారం', 'namaskaram',
+  'ac', 'ఏసీ', 'ఉక్క', 'కూలింగ్', 'cooling', 'వేడి', 'heat', 'warm', 'sweat',
+  'కండక్టర్', 'conductor', 'ఎక్స్ట్రా', 'extra', 'డబ్బులు', 'మనీ', 'money', 'లంచం', 'bribe', 'rude', 'behaved',
+  'డ్రైవర్', 'driver', 'రఫ్', 'rough', 'నిర్లక్ష్యం', 'వేగంగా', 'స్పీడ్', 'speed', 'భయం', 'fast', 'unsafe', 'rash',
+  'లేట్', 'late', 'డిలే', 'delay', 'వెయిట్', 'wait', 'ఆలస్యం', 'సమయం', 'delayed', 'behind',
+  'డ్రాప్', 'drop', 'దించారు', 'దించే', 'చోట', 'పాయింట్', 'point', 'wrong place', 'wrong drop',
+  'లగేజ్', 'luggage', 'బ్యాగ్', 'bag', 'డిక్', 'dicky', 'dickey', 'నీళ్లు', 'వాటర్', 'water', 'తడి', 'wet', 'damaged', 'lost',
+  'సీట్', 'seat', 'రిక్లైన్', 'recline', 'వాలలేదు', 'నిద్ర', 'sleep', 'విరిగిపోయింది', 'broken', 'dirty', 'uncomfortable',
+  'బిజీ', 'busy', 'పనిలో', 'వర్క్', 'work', 'తర్వాత', 'later', 'డ్రైవింగ్', 'working',
+  'హలో', 'hello', 'నమస్కారం', 'namaskaram', 'hi', 'namaste',
   'బాగుంది', 'బాగానే', 'ok', 'okay', 'ఓకే', 'సూపర్', 'super', 'గుడ్', 'good', 'హ్యాపీ', 'happy', 'నైస్', 'nice', 'కంఫర్ట్', 'comfort', 'ధన్యవాదాలు', 'థాంక్స్',
-  'బాగాలేదు', 'నచ్చలేదు', 'వేస్ట్', 'వరస్ట్', 'ప్రాబ్లం', 'problem', 'ఇబ్బంది', 'సరిగ్గా', 'చెత్త', 'ఖరాబ్', 'దారుణం', 'కష్టం'
+  'బాగాలేదు', 'నచ్చలేదు', 'వేస్ట్', 'వరస్ట్', 'ప్రాబ్లం', 'problem', 'ఇబ్బంది', 'సరిగ్గా', 'చెత్త', 'ఖరాబ్', 'దారుణం', 'కష్టం',
+  'english', 'telugu', 'తెలుగు', 'ఇంగ్లీష్', 'inglis', 'comfortable'
 ];
 
 // Filter out background noise, single syllables, and repetitive filler phrases
@@ -378,7 +372,7 @@ function isLikelyBackgroundNoise(text) {
 }
 
 // Local keyword-triggered response engine (Supports composite multi-complaint apologies)
-function getKeywordResponse(userInput) {
+function getKeywordResponse(userInput, lang = 'te') {
   const input = userInput.toLowerCase();
 
   // 1. Identify which negative categories are matched
@@ -396,59 +390,117 @@ function getKeywordResponse(userInput) {
     const hasCrm = matchedCategories.some(cat => cat.action_tag === 'escalate_to_crm');
     const finalTag = hasCrm ? 'escalate_to_crm' : 'log_maintenance_ticket';
 
-    if (matchedCategories.length === 1) {
-      return {
-        speech: matchedCategories[0].originalResponse.speech,
-        action_tag: finalTag
-      };
-    } else {
-      // Build dynamic composite apology
-      const phrases = matchedCategories.map(cat => cat.phrase);
-      let joinedIssues = '';
-      if (phrases.length === 2) {
-        joinedIssues = `${phrases[0]} మరియు ${phrases[1]}`;
+    if (lang === 'en') {
+      if (matchedCategories.length === 1) {
+        return {
+          speech: matchedCategories[0].speech_en,
+          action_tag: finalTag
+        };
       } else {
-        const lastPhrase = phrases.pop();
-        joinedIssues = `${phrases.join(', ')} మరియు ${lastPhrase}`;
+        // Build dynamic composite apology in English
+        const phrases = matchedCategories.map(cat => cat.phrase_en);
+        let joinedIssues = '';
+        if (phrases.length === 2) {
+          joinedIssues = `${phrases[0]} and ${phrases[1]}`;
+        } else {
+          const lastPhrase = phrases.pop();
+          joinedIssues = `${phrases.join(', ')}, and ${lastPhrase}`;
+        }
+        const speech = `Oh, I am very sorry that you faced issues with the ${joinedIssues} during your journey. I have registered these complaints, and our team will definitely look into it.`;
+        return {
+          speech,
+          action_tag: finalTag
+        };
       }
+    } else {
+      if (matchedCategories.length === 1) {
+        return {
+          speech: matchedCategories[0].speech_te,
+          action_tag: finalTag
+        };
+      } else {
+        // Build dynamic composite apology in Telugu
+        const phrases = matchedCategories.map(cat => cat.phrase);
+        let joinedIssues = '';
+        if (phrases.length === 2) {
+          joinedIssues = `${phrases[0]} మరియు ${phrases[1]}`;
+        } else {
+          const lastPhrase = phrases.pop();
+          joinedIssues = `${phrases.join(', ')} మరియు ${lastPhrase}`;
+        }
 
-      const speech = `అయ్యో, అవునా అండీ... జర్నీలో ${joinedIssues} వల్ల మీకు ఇబ్బంది కలిగినందుకు చాలా సారీ అండీ. నేను ఇప్పుడే ఈ కంప్లైంట్స్ అన్నీ నోట్ చేసుకుంటున్నాను, కచ్చితంగా మా టీమ్ తో మాట్లాడి సాల్వ్ చేయిస్తాం అండీ.`;
-      
-      return {
-        speech,
-        action_tag: finalTag
-      };
+        const speech = `అయ్యో, అవునా అండీ... జర్నీలో ${joinedIssues} వల్ల మీకు ఇబ్బంది కలిగినందుకు చాలా సారీ అండీ. నేను ఇప్పుడే ఈ కంప్లైంట్స్ అన్నీ నోట్ చేసుకుంటున్నాను, కచ్చితంగా మా టీమ్ తో మాట్లాడి సాల్వ్ చేయిస్తాం అండీ.`;
+        
+        return {
+          speech,
+          action_tag: finalTag
+        };
+      }
     }
   }
 
   // 3. Busy / Work / Call Later
-  if (input.includes('బిజీ') || input.includes('busy') || input.includes('పనిలో') || input.includes('వర్క్') || input.includes('work') || input.includes('తర్వాత') || input.includes('later') || input.includes('డ్రైవింగ్')) {
-    return {
-      speech: "సరేనండీ, సారీ ఫర్ ద డిస్టర్బెన్స్. జస్ట్ ఒకే ఒక్క మాట, నిన్న జర్నీ అంతా ఓకే కదా అండీ?",
-      action_tag: "active_chat"
-    };
+  if (lang === 'en') {
+    if (input.includes('busy') || input.includes('working') || input.includes('work') || input.includes('later') || input.includes('driving')) {
+      return {
+        speech: "No problem, sorry to disturb you. Just one quick question, was your journey yesterday okay?",
+        action_tag: "active_chat"
+      };
+    }
+  } else {
+    if (input.includes('బిజీ') || input.includes('busy') || input.includes('పనిలో') || input.includes('వర్క్') || input.includes('work') || input.includes('తర్వాత') || input.includes('later') || input.includes('డ్రైవింగ్')) {
+      return {
+        speech: "సరేనండీ, సారీ ఫర్ ద డిస్టర్బెన్స్. జస్ట్ ఒకే ఒక్క మాట, నిన్న జర్నీ అంతా ఓకే కదా అండీ?",
+        action_tag: "active_chat"
+      };
+    }
   }
 
   // 4. Initial Hello
-  if (input.includes('హలో') || input.includes('hello') || input.includes('నమస్కారం') || input.includes('namaskaram')) {
-    return {
-      speech: "నమస్కారం అండీ, నేను మాగ్ని ట్రావెల్స్ నుంచి స్వాతిని మాట్లాడుతున్నాను. నిన్న మన బస్సులో మీ జర్నీ ఎలా జరిగింది అండీ? అంతా బాగుందా?",
-      action_tag: "active_chat"
-    };
+  if (lang === 'en') {
+    if (input.includes('hello') || input.includes('hi') || input.includes('namaste')) {
+      return {
+        speech: "Hello, I am Swathi calling from Pramukh Travels. How was your journey yesterday? Was it good?",
+        action_tag: "active_chat"
+      };
+    }
+  } else {
+    if (input.includes('హలో') || input.includes('hello') || input.includes('నమస్కారం') || input.includes('namaskaram')) {
+      return {
+        speech: "నమస్కారం అండీ, నేను ప్రముఖ్ ట్రావెల్స్ నుంచి స్వాతిని మాట్లాడుతున్నాను. నిన్న మన బస్సులో మీ జర్నీ ఎలా జరిగింది అండీ? అంతా బాగుందా?",
+        action_tag: "active_chat"
+      };
+    }
   }
 
   // 5. Positive feedback
-  if (input.includes('బాగుంది') || input.includes('బాగానే') || input.includes('ok') || input.includes('okay') || input.includes('ఓకే') || input.includes('సూపర్') || input.includes('super') || input.includes('గుడ్') || input.includes('good') || input.includes('హ్యాపీ') || input.includes('happy') || input.includes('నైస్') || input.includes('nice') || input.includes('కంఫర్ట్') || input.includes('comfort') || input.includes('ధన్యవాదాలు') || input.includes('థాంక్స్')) {
-    return {
-      speech: "చాలా థాంక్స్ అండీ. మీ జర్నీ బాగా జరిగినందుకు సంతోషం. కుదిరితే రెడ్ బస్ యాప్ లో మాకు రేటింగ్ ఇవ్వగలరా అండీ? వాట్సాప్ లో లింక్ పంపిస్తాను, థాంక్యూ అండీ.",
-      action_tag: "trigger_sms_review"
-    };
+  if (lang === 'en') {
+    if (input.includes('good') || input.includes('nice') || input.includes('super') || input.includes('happy') || input.includes('comfort') || input.includes('comfortable') || input.includes('fine') || input.includes('excellent') || input.includes('ok') || input.includes('okay') || input.includes('thanks') || input.includes('thank you')) {
+      return {
+        speech: "Thank you so much! We are glad you had a comfortable journey. Could you please rate us on the redBus app? I will send you a WhatsApp link. Thank you!",
+        action_tag: "trigger_sms_review"
+      };
+    }
+  } else {
+    if (input.includes('బాగుంది') || input.includes('బాగానే') || input.includes('ok') || input.includes('okay') || input.includes('ఓకే') || input.includes('సూపర్') || input.includes('super') || input.includes('గుడ్') || input.includes('good') || input.includes('హ్యాపీ') || input.includes('happy') || input.includes('నైస్') || input.includes('nice') || input.includes('కంఫర్ట్') || input.includes('comfort') || input.includes('ధన్యవాదాలు') || input.includes('థాంక్స్')) {
+      return {
+        speech: "చాలా థాంక్స్ అండీ. మీ జర్నీ బాగా జరిగినందుకు సంతోషం. కుదిరితే రెడ్ బస్ యాప్ లో మాకు రేటింగ్ ఇవ్వగలరా అండీ? వాట్సాప్ లో లింక్ పంపిస్తాను, థాంక్యూ అండీ.",
+        action_tag: "trigger_sms_review"
+      };
+    }
   }
 
   // Fallback default response
+  if (lang === 'en') {
+    return {
+      speech: "I see. Thank you for your feedback. We will note this down.",
+      action_tag: "active_chat"
+    };
+  }
   return {
     speech: "అవునా అండీ, సరేనండీ. మీ అభిప్రాయాన్ని నోట్ చేసుకున్నాను, థాంక్యూ అండీ.",
-    };
+    action_tag: "active_chat"
+  };
 }
 
 // Upgrade HTTP connection to appropriate WebSocket Server
@@ -497,6 +549,10 @@ wss.on('connection', (ws) => {
   let mediaBuffer = Buffer.alloc(0);
   let ttsFlushTimeout = null;
 
+  // Dialog state machine for language negotiation
+  let dialogState = 'language_negotiation';
+  let currentLanguage = 'en'; // Start in English for the greeting
+
   function attemptGreeting() {
     if (streamSid && ttsConfigured && !greetingSent) {
       greetingSent = true;
@@ -504,9 +560,35 @@ wss.on('connection', (ws) => {
     }
   }
 
+  // Helper to dynamically update TTS language and speaker configuration
+  function updateTtsConfig(lang) {
+    if (sarvamTtsWs && sarvamTtsWs.readyState === WebSocket.OPEN) {
+      const speaker = lang === 'en' 
+        ? (process.env.SARVAM_SPEAKER_EN || 'neha') 
+        : (process.env.SARVAM_SPEAKER_TE || 'neha');
+      const targetLangCode = lang === 'en' ? 'en-IN' : 'te-IN';
+      const pace = parseFloat(process.env.SARVAM_PACE || '1.35');
+      const temperature = parseFloat(process.env.SARVAM_TEMPERATURE || '0.2');
+
+      const config = {
+        type: 'config',
+        data: {
+          target_language_code: targetLangCode,
+          speaker: speaker,
+          output_audio_codec: 'linear16',
+          speech_sample_rate: 8000,
+          pace: pace,
+          temperature: temperature
+        }
+      };
+      console.log(`Dynamically updating TTS Config for language "${lang}": speaker=${speaker}, langCode=${targetLangCode}`);
+      sarvamTtsWs.send(JSON.stringify(config));
+    }
+  }
+
   // Helper to send the initial greeting
   function sendInitialGreeting() {
-    const greetingText = "నమస్కారం అండీ, నేను మాగ్ని ట్రావెల్స్ నుంచి స్వాతిని మాట్లాడుతున్నాను. నిన్న మన బస్సులో మీ జర్నీ ఎలా జరిగింది అండీ? అంతా బాగుందా?";
+    const greetingText = "Welcome to Pramukh Travels, Which language are you comfortable english or telugu";
     console.log(`[Swathi Greeting]: ${greetingText}`);
     aiResponseLogs.push(greetingText);
     conversationHistory.push({ role: 'assistant', content: greetingText });
@@ -531,6 +613,38 @@ wss.on('connection', (ws) => {
     }
   }
 
+  // Helper to stream response text to Sarvam TTS WebSocket
+  function streamTtsResponse(aiResponse) {
+    if (sarvamTtsWs && sarvamTtsWs.readyState === WebSocket.OPEN) {
+      // Clear any unsent buffered audio before starting a new turn
+      mediaBuffer = Buffer.alloc(0);
+      if (ttsFlushTimeout) {
+        clearTimeout(ttsFlushTimeout);
+        ttsFlushTimeout = null;
+      }
+
+      // Send clear event to Exotel to stop any currently playing audio immediately
+      if (ws.readyState === WebSocket.OPEN && streamSid) {
+        const clearFrame = {
+          event: 'clear',
+          stream_sid: streamSid
+        };
+        ws.send(JSON.stringify(clearFrame));
+      }
+
+      const ttsMessage = {
+        type: 'text',
+        data: {
+          text: aiResponse
+        }
+      };
+      sarvamTtsWs.send(JSON.stringify(ttsMessage));
+      sarvamTtsWs.send(JSON.stringify({ type: 'flush' }));
+    } else {
+      console.warn('Cannot synthesize TTS: Sarvam TTS WebSocket is not open.');
+    }
+  }
+
   const sarvamApiKey = process.env.SARVAM_API_KEY;
 
   if (!sarvamApiKey) {
@@ -541,7 +655,8 @@ wss.on('connection', (ws) => {
   function initSarvamStt() {
     if (!sarvamApiKey) return;
 
-    const sttUrl = 'wss://api.sarvam.ai/speech-to-text/ws?model=saaras:v3&language-code=te-IN&mode=transcribe&sample_rate=8000&high_vad_sensitivity=true';
+    // Use language-code=unknown for automatic language detection
+    const sttUrl = 'wss://api.sarvam.ai/speech-to-text/ws?model=saaras:v3&language-code=unknown&mode=transcribe&sample_rate=8000&high_vad_sensitivity=true';
     console.log(`Connecting to Sarvam STT WebSocket at: ${sttUrl}`);
 
     sarvamSttWs = new WebSocket(sttUrl, {
@@ -589,57 +704,85 @@ wss.on('connection', (ws) => {
                 text: finalUtterance
               });
 
-              // Get response locally using keyword trigger system
-              const responseData = getKeywordResponse(finalUtterance);
-              const aiResponse = responseData.speech;
-              
-              // Prevent negative tickets from being downgraded back to positive review tags
-              const newActionTag = responseData.action_tag;
-              const isCurrentTagNegative = finalActionTag === 'escalate_to_crm' || finalActionTag === 'log_maintenance_ticket';
-              
-              if (!isCurrentTagNegative) {
-                finalActionTag = newActionTag;
-              } else if (newActionTag === 'escalate_to_crm' || newActionTag === 'log_maintenance_ticket') {
-                finalActionTag = newActionTag; // Allow switching between negative tags
-              }
-              
-              console.log(`[Keyword Response]: ${aiResponse} (action_tag: ${finalActionTag})`);
-              aiResponseLogs.push(aiResponse);
+              if (dialogState === 'language_negotiation') {
+                const utteranceLower = finalUtterance.toLowerCase();
+                const prefersTelugu = utteranceLower.includes('telugu') || 
+                                      utteranceLower.includes('తెలుగు') || 
+                                      /[\u0c00-\u0c7f]/.test(finalUtterance);
+                                      
+                const prefersEnglish = utteranceLower.includes('english') || 
+                                       utteranceLower.includes('inglis') || 
+                                       utteranceLower.includes('comfortable');
 
-              // Broadcast bot response to dashboard
-              broadcastToDashboards('response', {
-                streamSid,
-                text: aiResponse
-              });
-
-              // Stream response text to Sarvam TTS WebSocket
-              if (sarvamTtsWs && sarvamTtsWs.readyState === WebSocket.OPEN) {
-                // Clear any unsent buffered audio before starting a new turn
-                mediaBuffer = Buffer.alloc(0);
-                if (ttsFlushTimeout) {
-                  clearTimeout(ttsFlushTimeout);
-                  ttsFlushTimeout = null;
-                }
-
-                // Send clear event to Exotel to stop any currently playing audio immediately
-                if (ws.readyState === WebSocket.OPEN && streamSid) {
-                  const clearFrame = {
-                    event: 'clear',
-                    stream_sid: streamSid
-                  };
-                  ws.send(JSON.stringify(clearFrame));
-                }
-
-                const ttsMessage = {
-                  type: 'text',
-                  data: {
+                if (prefersTelugu) {
+                  currentLanguage = 'te';
+                  dialogState = 'journey_feedback';
+                  
+                  // Update TTS to use Telugu configuration
+                  updateTtsConfig('te');
+                  
+                  const aiResponse = "సరేనండీ, తెలుగులోనే మాట్లాడుకుందాం. నిన్న మన ప్రముఖ్ ట్రావెల్స్ లో మీ జర్నీ ఎలా జరిగింది అండీ? అంతా బాగుందా?";
+                  console.log(`[Dialog State]: Negotiated language: Telugu. Response: ${aiResponse}`);
+                  aiResponseLogs.push(aiResponse);
+                  
+                  broadcastToDashboards('response', {
+                    streamSid,
                     text: aiResponse
-                  }
-                };
-                sarvamTtsWs.send(JSON.stringify(ttsMessage));
-                sarvamTtsWs.send(JSON.stringify({ type: 'flush' }));
+                  });
+                  
+                  streamTtsResponse(aiResponse);
+                } else if (prefersEnglish || /^[a-zA-Z0-9\s,.'?!\-()]+$/.test(finalUtterance)) {
+                  currentLanguage = 'en';
+                  dialogState = 'journey_feedback';
+                  
+                  // Update TTS to use English configuration
+                  updateTtsConfig('en');
+                  
+                  const aiResponse = "Great! Let's continue in English. How was your journey yesterday with Pramukh Travels? Was it comfortable?";
+                  console.log(`[Dialog State]: Negotiated language: English. Response: ${aiResponse}`);
+                  aiResponseLogs.push(aiResponse);
+                  
+                  broadcastToDashboards('response', {
+                    streamSid,
+                    text: aiResponse
+                  });
+                  
+                  streamTtsResponse(aiResponse);
+                } else {
+                  const aiResponse = "Sorry, which language do you prefer? English or Telugu?";
+                  console.log(`[Dialog State]: Ambiguous language negotiation. Repeating question.`);
+                  aiResponseLogs.push(aiResponse);
+                  
+                  broadcastToDashboards('response', {
+                    streamSid,
+                    text: aiResponse
+                  });
+                  
+                  streamTtsResponse(aiResponse);
+                }
               } else {
-                console.warn('Cannot synthesize TTS: Sarvam TTS WebSocket is not open.');
+                // dialogState === 'journey_feedback'
+                const responseData = getKeywordResponse(finalUtterance, currentLanguage);
+                const aiResponse = responseData.speech;
+                
+                const newActionTag = responseData.action_tag;
+                const isCurrentTagNegative = finalActionTag === 'escalate_to_crm' || finalActionTag === 'log_maintenance_ticket';
+                
+                if (!isCurrentTagNegative) {
+                  finalActionTag = newActionTag;
+                } else if (newActionTag === 'escalate_to_crm' || newActionTag === 'log_maintenance_ticket') {
+                  finalActionTag = newActionTag;
+                }
+                
+                console.log(`[Keyword Response]: ${aiResponse} (action_tag: ${finalActionTag})`);
+                aiResponseLogs.push(aiResponse);
+
+                broadcastToDashboards('response', {
+                  streamSid,
+                  text: aiResponse
+                });
+
+                streamTtsResponse(aiResponse);
               }
             }
           }, 800);
@@ -674,23 +817,23 @@ wss.on('connection', (ws) => {
     sarvamTtsWs.on('open', () => {
       console.log('Sarvam TTS connection opened successfully.');
       
-      const speaker = process.env.SARVAM_SPEAKER || 'neha';
-      const pace = parseFloat(process.env.SARVAM_PACE || '1.2');
+      const speakerEn = process.env.SARVAM_SPEAKER_EN || 'neha';
+      const pace = parseFloat(process.env.SARVAM_PACE || '1.35');
       const temperature = parseFloat(process.env.SARVAM_TEMPERATURE || '0.2');
 
-      // Send configuration message
+      // Send configuration message (Start in English for greeting)
       const config = {
         type: 'config',
         data: {
-          target_language_code: 'te-IN',
-          speaker: speaker,
+          target_language_code: 'en-IN',
+          speaker: speakerEn,
           output_audio_codec: 'linear16',
           speech_sample_rate: 8000,
           pace: pace,
           temperature: temperature
         }
       };
-      console.log(`Sending TTS Config: speaker=${speaker}, pace=${pace}, temp=${temperature}`);
+      console.log(`Sending Initial English TTS Config: speaker=${speakerEn}, pace=${pace}, temp=${temperature}`);
       sarvamTtsWs.send(JSON.stringify(config));
       ttsConfigured = true;
       attemptGreeting();
